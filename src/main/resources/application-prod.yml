@@ -1,0 +1,151 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    web-application-type: reactive
+    allow-circular-references: true
+  r2dbc:
+    url: r2dbc:mysql://193.122.150.2:3306/sure_trade_db
+    username: admingms
+    password: e+H]63kb%_=m6G
+    name: sure_trade_db
+    generate-unique-name: true
+    pool:
+      initial-size: 10
+      max-size: 20
+      enabled: true
+  flyway:
+    enabled: false
+    url: ${spring.r2dbc.url}
+    user: ${spring.r2dbc.username}
+    password: ${spring.r2dbc.password}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    uri: amqp://guest:guest@localhost:5672
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+  kafka:
+    client-id: messaging-service
+    bootstrap-servers:
+      - kafka:9092
+      - kafka:9093
+      - kafka:9094
+    consumer:
+        group-id: messaging-service
+        auto-offset-reset: earliest
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    use-root-path: true
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+
+server:
+  error:
+    whitelabel:
+      enabled: false
+
+
+jwt:
+  secret: 2f8d94e28d41a9c187b3fe8efc9c69ea1f23f1a7a334b0a529b58f4ed7427fcf
+  expiration: 86400000
+
+otp:
+  expiration: 15
+  length: 6
+
+client:
+  messaging-server:
+    base-url: http://localhost:8080
+    client-id: 1
+    client-secret: 123456
+    scope:
+        - read
+        - write
+        - trust
+  product-server:
+    base-url: http://localhost:8089/api/v2/products
+    client-id: 4647777
+    client-secret: 4647777
+    scope:
+        - read
+        - write
+        - trust
+  payment-server:
+    base-url: http://localhost:8080
+    client-id: 1
+    client-secret: 123456
+    scope:
+        - read
+        - write
+        - trust
+  timeout: 5000
+
+
+rabbitmq:
+  # Notification
+  notification:
+    queue: notification_queue
+    exchange: notification_exchange
+    routing-key: notification_routing_key
+    dead-letter-queue: notification_dead_letter_queue
+  # Email
+  email:
+    queue: email_queue
+    exchange: email_exchange
+    routing-key: email_routing_key
+    dead-letter-queue: email_dead_letter_queue
+  # SMS
+  sms:
+    queue: sms_queue
+    exchange: sms_exchange
+    routing-key: sms_routing_key
+    dead-letter-queue: sms_dead_letter_queue
+  # Telegram
+  telegram:
+    queue: telegram_queue
+    exchange: telegram_exchange
+    routing-key: telegram_routing_key
+    dead-letter-queue: telegram_dead_letter_queue
+  # WhatsApp
+  whatsapp:
+    queue: whatsapp_queue
+    exchange: whatsapp_exchange
+    routing-key: whatsapp_routing_key
+    dead-letter-queue: whatsapp_dead_letter_queue
+
+  telegram-activation:
+    queue: telegram_activation_queue
+    exchange: telegram_activation_exchange
+    routing-key: telegram_activation_routing_key
+    dead-letter-queue: telegram_activation_dead_letter_queue
+
+  gift-card-transaction:
+    queue: gift_card_transaction_queue
+    exchange: gift_card_transaction_exchange
+    routing-key: gift_card_transaction_routing_key
+    dead-letter-queue: gift_card_transaction_dead_letter_queue

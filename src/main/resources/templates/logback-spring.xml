@@ -1,0 +1,32 @@
+<!--<?xml version="1.0" encoding="UTF-8"?>-->
+<!--<configuration>-->
+
+<!--    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />-->
+
+<!--    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">-->
+<!--        <encoder class="net.logstash.logback.encoder.LogstashEncoder">-->
+<!--            <fieldNames>-->
+<!--                <timestamp>timestamp</timestamp>-->
+<!--                <version>version</version>-->
+<!--                <message>message</message>-->
+<!--                <logger>loggerName</logger>-->
+<!--                <thread>thread</thread>-->
+<!--                <levelValue>level</levelValue>-->
+<!--            </fieldNames>-->
+<!--            <prettyPrint>true</prettyPrint>-->
+<!--            <colors>-->
+<!--                <timestamp>clr(white)</timestamp>-->
+<!--                <version>clr(cyan)</version>-->
+<!--                <message>clr(white)</message>-->
+<!--                <logger>clr(yellow)</logger>-->
+<!--                <thread>clr(green)</thread>-->
+<!--                <levelValue>clr(red;blue)</levelValue>-->
+<!--            </colors>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
+<!--    <root level="INFO">-->
+<!--        <appender-ref ref="STDOUT" />-->
+<!--    </root>-->
+
+<!--</configuration>-->
