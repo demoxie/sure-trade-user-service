@@ -1,5 +1,5 @@
 server:
-  port: 4005
+  port: 4006
   servlet:
       context-path: /api/v2
   error:

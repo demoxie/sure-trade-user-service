@@ -149,3 +149,15 @@ rabbitmq:
     exchange: gift_card_transaction_exchange
     routing-key: gift_card_transaction_routing_key
     dead-letter-queue: gift_card_transaction_dead_letter_queue
+
+app:
+  admin:
+    wallet-address: 0x0f4ee9631f4be0a63756515141281a3e2b293bbe
+    email: shadrachadamu@outlook.com
+    username: jvizer
+    phone-number: +2348060000000
+  business:
+    gift-card-transactions:
+      fee: 0.01
+    crypto:
+      api-key: 5a2f1a4f-7f4a-4f1a-8f1a-4f1a7f4a5f1a
