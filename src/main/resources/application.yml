@@ -7,4 +7,4 @@ server:
     include-message: always
 spring:
   profiles:
-    active: local
+    active: dev
