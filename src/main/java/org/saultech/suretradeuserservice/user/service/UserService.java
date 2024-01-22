@@ -3,6 +3,7 @@ package org.saultech.suretradeuserservice.user.service;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.user.dto.BecomeAMerchantDto;
 import org.saultech.suretradeuserservice.user.dto.ProfileImageDto;
+import org.saultech.suretradeuserservice.user.dto.RegisterTelegramDto;
 import org.saultech.suretradeuserservice.user.dto.UserDto;
 import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
@@ -32,4 +33,5 @@ public interface UserService extends ReactiveUserDetailsService {
     Mono<APIResponse> getAdminWalletAddress();
 
     Mono<APIResponse> becomeMerchant(BecomeAMerchantDto dto);
+
 }

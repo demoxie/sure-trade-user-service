@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.user.dto.ProfileImageDto;
 import org.saultech.suretradeuserservice.user.dto.BecomeAMerchantDto;
+import org.saultech.suretradeuserservice.user.dto.RegisterTelegramDto;
 import org.saultech.suretradeuserservice.user.service.UserService;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
 import org.saultech.suretradeuserservice.utils.LoggingService;
@@ -18,7 +19,6 @@ import static org.saultech.suretradeuserservice.constants.BaseRoutes.USERS;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = USERS, produces = "application/json")
-@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'MERCHANT')")
 public class UserController {
     private final UserService userService;
 
@@ -59,5 +59,6 @@ public class UserController {
         LoggingService.logRequest(dto, "User Service","/users/merchant/request/", "POST");
         return userService.becomeMerchant(dto);
     }
+
 
 }

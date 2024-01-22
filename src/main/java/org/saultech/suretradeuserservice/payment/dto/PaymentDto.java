@@ -12,6 +12,7 @@ import org.saultech.suretradeuserservice.payment.enums.PaymentMethod;
 import org.saultech.suretradeuserservice.payment.enums.PaymentStatus;
 import org.saultech.suretradeuserservice.payment.enums.PaymentType;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -39,7 +40,7 @@ public class PaymentDto {
     @JsonProperty("currency")
     private String currency;
     @JsonProperty("amount")
-    private Long amount;
+    private BigDecimal amount;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @JsonProperty("paymentDate")
     private LocalDate paymentDate;
