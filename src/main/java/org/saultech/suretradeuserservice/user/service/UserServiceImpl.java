@@ -9,17 +9,23 @@ import org.saultech.suretradeuserservice.auth.JwtService;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
+import org.saultech.suretradeuserservice.messaging.notification.DeviceNotificationProperties;
+import org.saultech.suretradeuserservice.messaging.notification.NotificationData;
+import org.saultech.suretradeuserservice.messaging.notification.PushyMessage;
 import org.saultech.suretradeuserservice.messaging.sms.Sms;
+import org.saultech.suretradeuserservice.messaging.telegram.TelegramMessage;
 import org.saultech.suretradeuserservice.products.giftcard.service.APIClientService;
 import org.saultech.suretradeuserservice.rabbitmq.service.Producer;
 import org.saultech.suretradeuserservice.user.dto.BecomeAMerchantDto;
 import org.saultech.suretradeuserservice.user.dto.ProfileImageDto;
+import org.saultech.suretradeuserservice.user.dto.RegisterTelegramDto;
 import org.saultech.suretradeuserservice.user.dto.UserDto;
 import org.saultech.suretradeuserservice.user.entity.BecomeMerchantRequests;
 import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.enums.Role;
 import org.saultech.suretradeuserservice.user.repository.BecomeMerchantRequestRepository;
 import org.saultech.suretradeuserservice.business.repository.StakedAssetRepository;
+import org.saultech.suretradeuserservice.user.repository.UserDeviceDetailsRepository;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +42,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -67,6 +74,7 @@ public class UserServiceImpl implements UserService {
     private final APIClientService apiClientService;
     private final BecomeMerchantRequestRepository becomeMerchantRequestRepository;
     private final StakedAssetRepository stakedAssetRepository;
+    private final UserDeviceDetailsRepository userDeviceDetailsRepository;
 
     @Override
     public Mono<UserDetails> findByUsername(String username) {
@@ -144,7 +152,7 @@ public class UserServiceImpl implements UserService {
                     Authentication authentication = securityContext.getAuthentication();
                     log.info("Authentication: {}", authentication);
                     log.info("Principal: {}", authentication.getPrincipal());
-                    var loggedInUser =  authentication.getPrincipal();
+                    var loggedInUser = authentication.getPrincipal();
                     log.info("Logged in user: {}", loggedInUser);
                     return loggedInUser.toString();
                 })
@@ -162,7 +170,7 @@ public class UserServiceImpl implements UserService {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> {
                     Authentication authentication = securityContext.getAuthentication();
-                    var loggedInUser =  authentication.getPrincipal();
+                    var loggedInUser = authentication.getPrincipal();
                     return loggedInUser.toString();
                 })
                 .flatMap(userRepository::findUsersByEmail)
@@ -298,14 +306,14 @@ public class UserServiceImpl implements UserService {
                                                 .message("An error occurred while processing your request")
                                                 .statusCode(500)
                                                 .build()))
-                                        .flatMap(updatedStakedAsset->{
+                                        .flatMap(updatedStakedAsset -> {
                                             return becomeMerchantRequestRepository.save(req)
                                                     .switchIfEmpty(
                                                             Mono.error(APIException.builder()
                                                                     .message("An error occurred while processing your request")
                                                                     .statusCode(500)
                                                                     .build())
-                                                    ) .flatMap(Mono::just);
+                                                    ).flatMap(Mono::just);
                                         })
                                         .flatMap(savedMerchantRequest -> {
                                             Map<String, Object> userEmailBody = Map.of(

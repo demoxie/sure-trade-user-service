@@ -5,6 +5,10 @@ server:
   error:
     include-binding-errors: always
     include-message: always
+
 spring:
+  devtools:
+    restart:
+      log-condition-evaluation-delta: false
   profiles:
     active: dev

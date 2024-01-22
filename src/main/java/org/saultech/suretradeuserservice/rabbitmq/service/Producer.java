@@ -25,8 +25,8 @@ public class Producer {
         rabbitTemplate.convertAndSend(appConfig.getSms().getQueue(), message);
     }
 
-    public void sendTelegram(String message) {
-        rabbitTemplate.send(appConfig.getTelegram().getExchange(), appConfig.getTelegram().getRoutingKey(), new Message(message.getBytes()));
+    public void sendTelegram(Object message) {
+        rabbitTemplate.convertAndSend(appConfig.getTelegram().getQueue(), message);
     }
 
     public void sendTelegramActivation(String message) {

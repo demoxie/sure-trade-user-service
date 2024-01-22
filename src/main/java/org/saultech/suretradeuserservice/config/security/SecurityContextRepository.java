@@ -31,7 +31,8 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
             "/register",
             "/verify-otp",
             "/validate",
-            "swagger-ui"
+            "swagger-ui",
+            "/telegram/register"
     );
     @Override
     public Mono<Void> save(ServerWebExchange exchange, SecurityContext context) {
@@ -40,8 +41,11 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
 
     @Override
     public Mono<SecurityContext> load(ServerWebExchange exchange) {
-        //exempt auth endpoints
-        if (AUTH_WHITELIST.stream().anyMatch(p -> exchange.getRequest().getPath().value().contains(p))) {
+        if (AUTH_WHITELIST.stream().anyMatch(p -> {
+            log.info("Path: {}", exchange.getRequest().getPath().value());
+            return exchange.getRequest().getPath().value().contains(p);
+        })) {
+            log.info("Whitelisted Path: {}", exchange.getRequest().getPath().value());
             return Mono.empty();
         }
         String token = extractToken(exchange.getRequest());
