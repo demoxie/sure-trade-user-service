@@ -18,9 +18,9 @@ jobs:
         with:
           java-version: '17'
           distribution: 'corretto'
-          cache: maven
-      - name: Build with Maven
-        run: /home/ubuntu/.sdkman/candidates/maven/current/bin/mvn clean package -X
+          cache: gradle
+      - name: Build with Gradle
+        run: ./gradlew build
 
       - name: Deploy to VM
         run: |

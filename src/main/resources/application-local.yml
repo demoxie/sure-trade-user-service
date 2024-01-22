@@ -170,3 +170,9 @@ app:
       fee: 0.01
     crypto:
       api-key: 5a2f1a4f-7f4a-4f1a-8f1a-4f1a7f4a5f1a
+  blockchain:
+    local:
+      network-name: ropsten
+      url: https://ropsten.infura.io/v3/5a2f1a4f-7f4a-4f1a-8f1a-4f1a7f4a5f1a
+      chain-id: 3
+      gas-price: 20000000000

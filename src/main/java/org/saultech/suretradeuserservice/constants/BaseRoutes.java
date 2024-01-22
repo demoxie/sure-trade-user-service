@@ -13,6 +13,8 @@ public class BaseRoutes {
     public static final String GIFT_CARD_RATES = "/gift-card-rates";
 
     public static final String PAYMENTS = "/payments";
+
+    public static final String SOCIALS = "/socials";
     private BaseRoutes() {
     }
 }

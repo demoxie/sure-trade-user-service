@@ -26,20 +26,27 @@ public class SecurityConfig{
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextRepository securityContextRepository;
     private final AuthenticationManager authenticationManager;
+    private static final String BASE_URL = "/api/v2";
     private static final String[] AUTH_WHITELIST = {
-            "/api/v2/permissions/**",
-            "/api/v2/swagger-ui/**",
-            "/api/v2/swagger-ui.html",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/api/v2/swagger-resources/**",
-            "/api/v2/api-docs/**",
-            "/api-docs/**",
-            "/api/v2/actuator/**",
-            "/api/v2/h2-console/**",
-            "/api/v2/",
-            "/",
-            "/webjars/swagger-ui/index.html",
+            BASE_URL + "/auth/**",
+            BASE_URL + "/webjars/**",
+            BASE_URL + "/v3/api-docs/**",
+            BASE_URL + "/swagger-ui.html",
+            BASE_URL + "/swagger-ui/index.html",
+            BASE_URL + "/swagger-ui/",
+            BASE_URL + "/socials/telegram/**",
+    };
+
+    private static final String[] MERCHANT_ROUTES = {
+            BASE_URL + "/merchants/**",
+    };
+
+    private static final String[] ADMIN_ROUTES = {
+            BASE_URL + "/admin/**",
+    };
+
+    private static final String[] USER_ROUTES = {
+            BASE_URL + "/users/**",
     };
 
     @Bean
@@ -51,10 +58,9 @@ public class SecurityConfig{
                 .authorizeExchange(exchanges ->
                         exchanges
                                 .pathMatchers(AUTH_WHITELIST).permitAll()
-                                .pathMatchers("/api/v2/auth/**").permitAll()
-                                .pathMatchers("/api/v2/users/**").hasAnyAuthority("USER", "ADMIN", "MERCHANT")
-                                .pathMatchers("/webjars/**", "/swagger-ui.html", "/v3/api-docs/**")
-                                .permitAll()
+                                .pathMatchers(USER_ROUTES).hasAnyAuthority("USER", "MERCHANT")
+                                .pathMatchers(MERCHANT_ROUTES).hasAuthority("MERCHANT")
+                                .pathMatchers(ADMIN_ROUTES).hasAuthority("ADMIN")
                                 .anyExchange().authenticated()
                 )
                 .securityContextRepository(securityContextRepository)
