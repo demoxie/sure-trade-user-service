@@ -66,7 +66,7 @@ public class CreateGiftCardTransactionDto {
     @JsonProperty("currency")
     private String currency;
 
-    @NotNull(message = "Gift card dto is required")
+//    @NotNull(message = "Gift card dto is required")
     @JsonProperty("giftCardDto")
     private GiftCardDto giftCardDto;
 

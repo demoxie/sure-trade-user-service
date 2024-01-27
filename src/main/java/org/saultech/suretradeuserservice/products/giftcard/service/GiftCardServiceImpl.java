@@ -2,6 +2,7 @@ package org.saultech.suretradeuserservice.products.giftcard.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.messaging.email.Email;
 import org.saultech.suretradeuserservice.messaging.notification.DeviceNotificationProperties;
@@ -33,6 +34,7 @@ public class GiftCardServiceImpl implements GiftCardService{
     private final APIClientService apiClientService;
     private final UserService userService;
     private final Producer producer;
+    private final ModelMapper mapper;
     @Override
     public Mono<APIResponse> getGiftCardTransactions(int page, int size, String sort, String direction) {
         return apiClientService.makePostRequestWithoutQueryParamsWithFluxResponse("/gift-card/transaction/get-all", "product", GetMyGiftCardTransactionsWithOthersDto
@@ -50,7 +52,7 @@ public class GiftCardServiceImpl implements GiftCardService{
         return userService.getCurrentUser()
                 .flatMap(user -> {
                     createGiftCardTransactionDto.setUserId(user.getId());
-                    GiftCardDto giftCardDto = createGiftCardTransactionDto.getGiftCardDto();
+                    GiftCardDto giftCardDto = mapper.map(createGiftCardTransactionDto, GiftCardDto.class);
                     giftCardDto.setStatus(TransactionStatus.NEW.getStatus());
                     DateTimeFormatter formatter= DateTimeFormatter.ofPattern("yyyy-MM-dd");
                     giftCardDto.setExpiryDate(LocalDate.parse(giftCardDto.getExpiryDate().toString(), formatter));
