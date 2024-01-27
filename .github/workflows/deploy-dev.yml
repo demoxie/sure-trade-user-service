@@ -20,7 +20,7 @@ jobs:
           distribution: 'corretto'
           cache: gradle
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew clean build
 
       - name: Deploy to VM
         run: |
