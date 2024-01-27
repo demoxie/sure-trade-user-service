@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.auth.AuthRequest;
@@ -11,6 +12,7 @@ import org.saultech.suretradeuserservice.auth.dto.ResetPasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.auth.JwtService;
 import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
+import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
 import org.saultech.suretradeuserservice.messaging.sms.Sms;
@@ -20,7 +22,10 @@ import org.saultech.suretradeuserservice.user.enums.Role;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
 import org.saultech.suretradeuserservice.auth.dto.ChangePasswordRequest;
+import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.saultech.suretradeuserservice.utils.UtilService;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.relational.core.query.Query;
@@ -53,6 +58,8 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     private final RedisTemplate<String, Object> redisTemplate;
     private final Producer producer;
     private final ObjectMapper objectMapper;
+
+
     @Override
     public Mono<UserProfileVO> login(@Valid @RequestBody AuthRequest authRequest) {
         return userRepository.findUsersByEmail(authRequest.getEmail())
@@ -134,63 +141,88 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     @Override
     public Mono<UserProfileVO> register(SignUpRequest request) {
         return userRepository.findUsersByEmail(request.getEmail())
-                .flatMap(us -> {
-                    if (us != null) {
+                .onErrorResume(ex->{
+                    log.error("Error occurred: {}", ex.getClass());
+                    return Mono.error(
+                            APIException.builder()
+                                    .message(ErrorUtils.getErrorMessage(ex))
+                                    .statusCode(ErrorUtils.getStatusCode(ex))
+                                    .build()
+                    );
+                })
+                .flatMap(user -> {
+                    if (Objects.nonNull(user)) {
                         return Mono.error(
                                 APIException.builder()
-                                        .message("User already exists")
+                                        .message("Account already exists")
                                         .statusCode(409)
                                         .build()
                         );
                     }
-                    User userToSave = modelMapper.map(request, User.class);
-                    userToSave.setPassword(passwordEncoder.encode(request.getPassword()));
-                    userToSave.setCreatedAt(LocalDateTime.now());
-                    userToSave.setUpdatedAt(LocalDateTime.now());
-                    userToSave.setRoles(Role.SUPER_ADMIN);
-                    String otp = UtilService.generate6DigitOTP(6);
-                    userToSave.setOtp(otp);
-                    return userRepository.save(userToSave)
-                            .switchIfEmpty(Mono.error(
-                                    APIException.builder()
-                                            .message("Unable to save user")
-                                            .statusCode(500)
-                                            .build()
-                            ))
-                            .map(user -> {
-                                log.info("User saved: {}", user);
-                                Duration expirationTime = Duration.ofMinutes(15);
-                                redisTemplate.opsForValue().set(user.getEmail(), otp, expirationTime);
-                                Email email = Email.builder()
-                                        .to(user.getEmail())
-                                        .subject("Account Verification")
-                                        .body(Map.of("otp", otp))
-                                        .template("account-verification")
-                                        .createdDate(new Date())
-                                        .build();
+                    return Mono.just(new UserProfileVO());
+                })
+                .switchIfEmpty(handleRegistration(request));
 
-                                producer.sendEmail(email);
-                                Sms sms = Sms.builder()
-                                        .to(user.getPhoneNumber())
-                                        .body("Your OTP is " + otp)
-                                        .build();
-
-                                producer.sendSms(sms);
-                                ReactiveSecurityContextHolder.withAuthentication(
-                                        new UsernamePasswordAuthenticationToken(
-                                                user.getEmail(),
-                                                null,
-                                                user.getAuthorities()
-                                        )
-                                );
-                                return modelMapper.map(user, UserProfileVO.class);
-                            });
-                });
 
     }
 
+    public Mono<UserProfileVO> handleRegistration(SignUpRequest request){
+        User userToSave = modelMapper.map(request, User.class);
+        userToSave.setPassword(passwordEncoder.encode(request.getPassword()));
+        userToSave.setCreatedAt(LocalDateTime.now());
+        userToSave.setUpdatedAt(LocalDateTime.now());
+        userToSave.setRoles(Role.SUPER_ADMIN);
+        String otp = UtilService.generate6DigitOTP(6);
+        userToSave.setOtp(otp);
+        return userRepository.save(userToSave)
+                .onErrorResume(ex->{
+                    log.error("Error occurred: {}", ex.getClass());
+
+                    return Mono.error(
+                            APIException.builder()
+                                    .message(ErrorUtils.getErrorMessage(ex))
+                                    .statusCode(ErrorUtils.getStatusCode(ex))
+                                    .build()
+                    );
+                })
+                .switchIfEmpty(Mono.error(
+                        APIException.builder()
+                                .message("Unable to save user")
+                                .statusCode(500)
+                                .build()
+                ))
+                .map(user -> {
+                    log.info("User saved: {}", user);
+                    Duration expirationTime = Duration.ofMinutes(15);
+                    redisTemplate.opsForValue().set(user.getEmail(), otp, expirationTime);
+                    Email email = Email.builder()
+                            .to(user.getEmail())
+                            .subject("Account Verification")
+                            .body(Map.of("otp", otp))
+                            .template("account-verification")
+                            .createdDate(new Date())
+                            .build();
+
+                    producer.sendEmail(email);
+                    Sms sms = Sms.builder()
+                            .to(user.getPhoneNumber())
+                            .body("Your OTP is " + otp)
+                            .build();
+
+                    producer.sendSms(sms);
+                    ReactiveSecurityContextHolder.withAuthentication(
+                            new UsernamePasswordAuthenticationToken(
+                                    user.getEmail(),
+                                    null,
+                                    user.getAuthorities()
+                            )
+                    );
+                    return modelMapper.map(user, UserProfileVO.class);
+                });
+    }
+
     @Override
-    public Mono<UserProfileVO> verifyOtp(VerifyOtpRequest request) {
+    public Mono<APIResponse> verifyOtp(VerifyOtpRequest request) {
 
         return userRepository.findUsersByOtp(request.getOtp())
                 .switchIfEmpty(Mono.error(
@@ -245,7 +277,23 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                                                     user.getAuthorities()
                                             )
                                     );
-                                    return Mono.just(modelMapper.map(user, UserProfileVO.class));
+                                    Email email = Email.builder()
+                                            .to(user.getEmail())
+                                            .subject("Account Verification Successful")
+                                            .body(Map.of("username", user.getUsername()))
+                                            .template("account-verification-success")
+                                            .createdDate(new Date())
+                                            .build();
+
+                                    producer.sendEmail(email);
+                                    var result = modelMapper.map(user, UserProfileVO.class);
+                                    return Mono.just(
+                                            APIResponse.builder()
+                                                    .message("Account verified successfully")
+                                                    .statusCode(200)
+                                                    .data(result)
+                                                    .build()
+                                    );
                             });
                 });
     }
