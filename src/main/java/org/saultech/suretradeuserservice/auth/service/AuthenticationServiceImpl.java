@@ -234,7 +234,21 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                 .flatMap(user -> {
                     String otp = (String) redisTemplate.opsForValue().get(user.getEmail());
                     if (otp == null) {
-                        log.info("OTP used or has expired");
+                        Email email = Email.builder()
+                                .to(user.getEmail())
+                                .subject("Account Verification")
+                                .body(Map.of("otp", user.getOtp()))
+                                .template("account-verification")
+                                .createdDate(new Date())
+                                .build();
+                        producer.sendEmail(email);
+                        Sms sms = Sms.builder()
+                                .to(user.getPhoneNumber())
+                                .body("Your OTP is " + user.getOtp())
+                                .build();
+
+                        producer.sendSms(sms);
+
                         return Mono.error(
                                 APIException.builder()
                                         .message("OTP used or has expired")
