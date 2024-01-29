@@ -2,13 +2,14 @@ package org.saultech.suretradeuserservice.products.giftcard.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.common.APIResponse;
+import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
 import org.saultech.suretradeuserservice.messaging.notification.DeviceNotificationProperties;
 import org.saultech.suretradeuserservice.messaging.notification.NotificationData;
 import org.saultech.suretradeuserservice.messaging.notification.PushyMessage;
-import org.saultech.suretradeuserservice.messaging.sms.Sms;
 import org.saultech.suretradeuserservice.messaging.telegram.TelegramMessage;
 import org.saultech.suretradeuserservice.products.giftcard.dto.*;
 import org.saultech.suretradeuserservice.products.giftcard.enums.TransactionStatus;
@@ -18,13 +19,13 @@ import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.enums.Role;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.user.service.UserService;
+import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -481,118 +482,197 @@ public class GiftCardServiceImpl implements GiftCardService{
                         GiftCardTransactionVO vo = (GiftCardTransactionVO) apiResponse.getData();
                         return userRepository.findById(vo.getUserId())
                                 .flatMap(user -> {
-                                    if (dto.getStatus().equalsIgnoreCase("ACCEPT")){
-                                        Map<String, Object> data = Map.of(
-                                                "transactionReference", vo.getReferenceNo(),
-                                                "reason", dto.getReason(),
-                                                "name", user.getUsername()
-                                        );
-                                        Email emailToMerchant = Email.builder()
-                                                .to(user.getEmail())
-                                                .subject("Transaction Accepted")
-                                                .body(data)
-                                                .template("transaction-accepted")
-                                                .build();
-                                        Email feedBackEmail = Email.builder()
-                                                .to(user.getEmail())
-                                                .subject("Transaction Cancelled")
-                                                .body(data)
-                                                .template("transaction-accepted-feedback")
-                                                .build();
-                                        PushyMessage notificationToMerchant = PushyMessage.builder()
-                                                .to(user.getTelegramChatId())
-                                                .notification(
-                                                        DeviceNotificationProperties.builder()
-                                                                .title("Transaction Accepted")
-                                                                .badge(1)
-                                                                .sound("ping.aiff")
-                                                                .body("Your transaction with reference number "+vo.getReferenceNo()+" has been accepted")
-                                                                .build()
-                                                )
-                                                .data(
-                                                        NotificationData.builder()
-                                                                .message("Your transaction with reference number "+vo.getReferenceNo()+" has been accepted")
-                                                                .build()
-                                                )
-                                                .build();
-                                        PushyMessage notificationToUser = PushyMessage.builder()
-                                                .to(user.getTelegramChatId())
-                                                .notification(
-                                                        DeviceNotificationProperties.builder()
-                                                                .title("Transaction Accepted")
-                                                                .badge(1)
-                                                                .sound("ping.aiff")
-                                                                .body("Your transaction with reference number "+vo.getReferenceNo()+" has been accepted")
-                                                                .build()
-                                                )
-                                                .data(
-                                                        NotificationData.builder()
-                                                                .message("Your transaction with reference number "+vo.getReferenceNo()+" has been accepted")
-                                                                .build()
-                                                )
-                                                .build();
-                                        producer.sendEmail(emailToMerchant);
-                                        producer.sendEmail(feedBackEmail);
-                                        producer.sendNotification(notificationToMerchant);
-                                        producer.sendNotification(notificationToUser);
-                                        return Mono.just(apiResponse);
+                                    if (dto.getStatus().equalsIgnoreCase("ACCEPTED")){
+                                        return sendTransactionAcceptedMessage(apiResponse, user, vo);
                                     }
-                                    Map<String, Object> data = Map.of(
-                                            "transactionReference", vo.getReferenceNo(),
-                                            "reason", dto.getReason(),
-                                            "name", user.getUsername()
-                                    );
-                                    Email emailToMerchant = Email.builder()
-                                            .to(user.getEmail())
-                                            .subject("Transaction Declined")
-                                            .body(data)
-                                            .template("transaction-declined")
-                                            .build();
-                                    Email feedBackEmail = Email.builder()
-                                            .to(user.getEmail())
-                                            .subject("Transaction Declined")
-                                            .body(data)
-                                            .template("transaction-declined-feedback")
-                                            .build();
-                                    PushyMessage notificationToMerchant = PushyMessage.builder()
-                                            .to(user.getTelegramChatId())
-                                            .notification(
-                                                    DeviceNotificationProperties.builder()
-                                                            .title("Transaction Declined")
-                                                            .badge(1)
-                                                            .sound("ping.aiff")
-                                                            .body("Your transaction with reference number "+vo.getReferenceNo()+" has been declined")
-                                                            .build()
-                                            )
-                                            .data(
-                                                    NotificationData.builder()
-                                                            .message("Your transaction with reference number "+vo.getReferenceNo()+" has been declined")
-                                                            .build()
-                                            )
-                                            .build();
-                                    PushyMessage notificationToUser = PushyMessage.builder()
-                                            .to(user.getTelegramChatId())
-                                            .notification(
-                                                    DeviceNotificationProperties.builder()
-                                                            .title("Transaction Declined")
-                                                            .badge(1)
-                                                            .sound("ping.aiff")
-                                                            .body("Your transaction with reference number "+vo.getReferenceNo()+" has been declined")
-                                                            .build()
-                                            )
-                                            .data(
-                                                    NotificationData.builder()
-                                                            .message("Your transaction with reference number "+vo.getReferenceNo()+" has been delined")
-                                                            .build()
-                                            )
-                                            .build();
-                                    producer.sendEmail(emailToMerchant);
-                                    producer.sendEmail(feedBackEmail);
-                                    producer.sendNotification(notificationToMerchant);
-                                    producer.sendNotification(notificationToUser);
-                                    return Mono.just(apiResponse);
+                                    return sendTransactionDeclinedMessage(apiResponse, user, vo);
                                 });
                     }
+                    return Mono.just(apiResponse);
+                });
+    }
+
+
+    @NotNull
+    private Mono<APIResponse> sendTransactionAcceptedMessage(APIResponse apiResponse, User user, GiftCardTransactionVO vo) {
+        Map<String, Object> feedBackMailData = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "name", user.getUsername()
+        );
+        Email feedBackEmail = Email.builder()
+                .to(user.getEmail())
+                .subject("Transaction Cancelled")
+                .body(feedBackMailData)
+                .template("transaction-accepted-feedback")
+                .build();
+        PushyMessage notificationFeedBack = PushyMessage.builder()
+                .to(user.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("Transaction Accepted")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("You've accepted the transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .data(
+                        NotificationData.builder()
+                                .message("You've accepted the transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .build();
+
+        TelegramMessage telegramMessageFeedBack = TelegramMessage.builder()
+                .chatId(user.getTelegramChatId())
+                .message("You've accepted the transaction with reference number "+ vo.getReferenceNo())
+                .build();
+        producer.sendEmail(feedBackEmail);
+        producer.sendNotification(notificationFeedBack);
+        producer.sendTelegram(telegramMessageFeedBack);
+        return userRepository.findById(vo.getMerchantId())
+                .switchIfEmpty(
+                        Mono.error(
+                                APIException.builder()
+                                        .statusCode(404)
+                                        .message("User not found")
+                                        .build()
+                        )
+                )
+                .onErrorResume(
+                        ex -> Mono.error(
+                                APIException.builder()
+                                        .statusCode(ErrorUtils.getStatusCode(ex))
+                                        .message(ErrorUtils.getErrorMessage(ex))
+                                        .build()
+                        )
+                )
+                .flatMap(cardOwner -> {
+                    Map<String, Object> data = Map.of(
+                            "transactionReference", vo.getReferenceNo(),
+                            "name", cardOwner.getUsername()
+                    );
+                    Email emailToCardOwner = Email.builder()
+                            .to(cardOwner.getEmail())
+                            .subject("Transaction Accepted")
+                            .body(data)
+                            .template("transaction-accepted")
+                            .build();
+                    PushyMessage notificationToOwner = PushyMessage.builder()
+                            .to(cardOwner.getTelegramChatId())
+                            .notification(
+                                    DeviceNotificationProperties.builder()
+                                            .title("Transaction Accepted")
+                                            .badge(1)
+                                            .sound("ping.aiff")
+                                            .body("Your transaction with reference number " + vo.getReferenceNo() + " has been accepted")
+                                            .build()
+                            )
+                            .data(
+                                    NotificationData.builder()
+                                            .message("Your transaction with reference number " + vo.getReferenceNo() + " has been accepted")
+                                            .build()
+                            )
+                            .build();
+
+                    TelegramMessage telegramMessageToOwner = TelegramMessage.builder()
+                            .chatId(cardOwner.getTelegramChatId())
+                            .message("Your transaction with reference number " + vo.getReferenceNo() + " has been accepted")
+                            .build();
+                    producer.sendEmail(emailToCardOwner);
+                    producer.sendNotification(notificationToOwner);
+                    producer.sendTelegram(telegramMessageToOwner);
+                    return Mono.just(apiResponse);
+                });
+    }
+
+    private Mono<APIResponse> sendTransactionDeclinedMessage(APIResponse apiResponse, User user, GiftCardTransactionVO vo) {
+        Map<String, Object> feedBackMailData = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "name", user.getUsername()
+        );
+        Email feedBackEmail = Email.builder()
+                .to(user.getEmail())
+                .subject("Transaction Declined")
+                .body(feedBackMailData)
+                .template("transaction-declined-feedback")
+                .build();
+        PushyMessage notificationFeedBack = PushyMessage.builder()
+                .to(user.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("Transaction Declined")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("You've declined the transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .data(
+                        NotificationData.builder()
+                                .message("You've declined the transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .build();
+
+        TelegramMessage telegramMessageFeedBack = TelegramMessage.builder()
+                .chatId(user.getTelegramChatId())
+                .message("You've declined the transaction with reference number "+ vo.getReferenceNo())
+                .build();
+        producer.sendEmail(feedBackEmail);
+        producer.sendNotification(notificationFeedBack);
+        producer.sendTelegram(telegramMessageFeedBack);
+
+        return userRepository.findById(vo.getMerchantId())
+                .switchIfEmpty(
+                        Mono.error(
+                                APIException.builder()
+                                        .statusCode(404)
+                                        .message("User not found")
+                                        .build()
+                        )
+                )
+                .onErrorResume(
+                        ex -> Mono.error(
+                                APIException.builder()
+                                        .statusCode(ErrorUtils.getStatusCode(ex))
+                                        .message(ErrorUtils.getErrorMessage(ex))
+                                        .build()
+                        )
+                )
+                .flatMap(cardOwner -> {
+                    Map<String, Object> data = Map.of(
+                            "transactionReference", vo.getReferenceNo(),
+                            "name", cardOwner.getUsername()
+                    );
+                    Email emailToCardOwner = Email.builder()
+                            .to(cardOwner.getEmail())
+                            .subject("Transaction Declined")
+                            .body(data)
+                            .template("transaction-declined-feedback")
+                            .build();
+                    PushyMessage notificationToOwner = PushyMessage.builder()
+                            .to(cardOwner.getTelegramChatId())
+                            .notification(
+                                    DeviceNotificationProperties.builder()
+                                            .title("Transaction Declined")
+                                            .badge(1)
+                                            .sound("ping.aiff")
+                                            .body("Your transaction with reference number " + vo.getReferenceNo() + " has been declined")
+                                            .build()
+                            )
+                            .data(
+                                    NotificationData.builder()
+                                            .message("Your transaction with reference number " + vo.getReferenceNo() + " has been declined")
+                                            .build()
+                            )
+                            .build();
+
+                    TelegramMessage telegramMessageToOwner = TelegramMessage.builder()
+                            .chatId(cardOwner.getTelegramChatId())
+                            .message("Your transaction with reference number " + vo.getReferenceNo() + " has been declined")
+                            .build();
+                    producer.sendEmail(emailToCardOwner);
+                    producer.sendNotification(notificationToOwner);
+                    producer.sendTelegram(telegramMessageToOwner);
                     return Mono.just(apiResponse);
                 });
     }
