@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -55,8 +56,12 @@ public class GiftCardServiceImpl implements GiftCardService{
                     GiftCardDto giftCardDto = mapper.map(createGiftCardTransactionDto, GiftCardDto.class);
                     giftCardDto.setStatus(TransactionStatus.NEW.getStatus());
                     DateTimeFormatter formatter= DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    giftCardDto.setExpiryDate(LocalDate.parse(giftCardDto.getExpiryDate().toString(), formatter));
+                    giftCardDto.setExpiryDate(LocalDate.parse(createGiftCardTransactionDto.getExpiryDate().toString(), formatter));
                     giftCardDto.setUserId(user.getId());
+                    Screenshots screenshots = Screenshots.builder()
+                            .url(createGiftCardTransactionDto.getScreenshots())
+                            .build();
+                    giftCardDto.setScreenshots(screenshots);
                     createGiftCardTransactionDto.setGiftCardDto(giftCardDto);
                     createGiftCardTransactionDto.setUserId(user.getId());
                     createGiftCardTransactionDto.setStatus(TransactionStatus.NEW.getStatus());
@@ -68,84 +73,14 @@ public class GiftCardServiceImpl implements GiftCardService{
                                         return userRepository.findById(vo.getMerchantId())
                                                 .flatMap(merchant -> {
                                                     log.info("Merchant: {}", merchant.getEmail());
-                                                    Map<String, Object> data = Map.of(
-                                                            "transactionReference", vo.getReferenceNo(),
-                                                            "name", merchant.getUsername(),
-                                                            "cardType", giftCardDto.getCardType(),
-                                                            "cardIssuer", giftCardDto.getCardIssuer(),
-                                                            "quantity", giftCardDto.getQuantity(),
-                                                            "pricePerUnit", giftCardDto.getAmount(),
-                                                            "cardCurrency", giftCardDto.getCurrency(),
-                                                            "paymentCurrency", createGiftCardTransactionDto.getCurrency()
-                                                    );
-                                                    Email emailToMerchant = Email.builder()
-                                                            .to(merchant.getEmail())
-                                                            .subject("New Transaction")
-                                                            .body(data)
-                                                            .template("gift-card-transaction")
-                                                            .build();
-                                                    PushyMessage notificationToMerchant = PushyMessage.builder()
-                                                            .to(merchant.getTelegramChatId())
-                                                            .notification(
-                                                                    DeviceNotificationProperties.builder()
-                                                                            .title("New Transaction")
-                                                                            .badge(1)
-                                                                            .sound("ping.aiff")
-                                                                            .body("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                                            .build()
-                                                            )
-                                                            .data(
-                                                                    NotificationData.builder()
-                                                                            .message("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                                            .build()
-                                                            )
-                                                            .build();
-                                                    producer.sendEmail(emailToMerchant);
-                                                    Sms smsToMerchant = Sms.builder()
-                                                            .to(merchant.getPhoneNumber())
-                                                            .body("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                            .build();
-                                                    producer.sendSms(smsToMerchant);
-
-                                                    TelegramMessage telegramMessageToMerchant = TelegramMessage.builder()
-                                                            .chatId(merchant.getTelegramChatId())
-                                                            .message("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                            .build();
-                                                    producer.sendTelegram(telegramMessageToMerchant);
-                                                    producer.sendNotification(notificationToMerchant);
+                                                    sendMessageAsUser(createGiftCardTransactionDto, user, merchant, vo, giftCardDto);
                                                     return Mono.just(apiResponse);
                                                 });
                                     }
                                     return userRepository.findById(vo.getUserId())
                                             .flatMap(user1 -> {
-                                                Map<String, Object> data = Map.of(
-                                                        "transactionReference", vo.getReferenceNo(),
-                                                        "name", user1.getUsername()
-                                                );
-                                                Email emailToMerchant = Email.builder()
-                                                        .to(user1.getEmail())
-                                                        .subject("New Transaction")
-                                                        .body(data)
-                                                        .template("new-transaction")
-                                                        .build();
-                                                PushyMessage notificationToMerchant = PushyMessage.builder()
-                                                        .to(user1.getTelegramChatId())
-                                                        .notification(
-                                                                DeviceNotificationProperties.builder()
-                                                                        .title("New Transaction")
-                                                                        .badge(1)
-                                                                        .sound("ping.aiff")
-                                                                        .body("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                                        .build()
-                                                        )
-                                                        .data(
-                                                                NotificationData.builder()
-                                                                        .message("You have a new transaction with reference number "+vo.getReferenceNo())
-                                                                        .build()
-                                                        )
-                                                        .build();
-                                                producer.sendEmail(emailToMerchant);
-                                                producer.sendNotification(notificationToMerchant);
+                                                sendMessageAsMerchant(user, user1, vo);
+
                                                 return Mono.just(apiResponse);
                 });
                                 }
@@ -153,6 +88,155 @@ public class GiftCardServiceImpl implements GiftCardService{
                             });
                 });
 
+    }
+
+    private void sendMessageAsUser(CreateGiftCardTransactionDto createGiftCardTransactionDto, User user, User merchant, GiftCardTransactionVO vo, GiftCardDto giftCardDto) {
+        Map<String, Object> merchantMailData = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "name", merchant.getUsername(),
+                "cardType", giftCardDto.getCardType(),
+                "cardIssuer", giftCardDto.getCardIssuer(),
+                "quantity", giftCardDto.getQuantity(),
+                "pricePerUnit", giftCardDto.getAmount(),
+                "cardCurrency", giftCardDto.getCurrency(),
+                "paymentCurrency", createGiftCardTransactionDto.getCurrency()
+        );
+        Email emailToMerchant = Email.builder()
+                .to(merchant.getEmail())
+                .subject("New Transaction")
+                .body(merchantMailData)
+                .template("gift-card-transaction")
+                .build();
+        PushyMessage notificationToMerchant = PushyMessage.builder()
+                .to(merchant.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("New Transaction")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("You have a new transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .data(
+                        NotificationData.builder()
+                                .message("You have a new transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .build();
+        producer.sendEmail(emailToMerchant);
+
+        TelegramMessage telegramMessageToMerchant = TelegramMessage.builder()
+                .chatId(merchant.getTelegramChatId())
+                .message("You have a new transaction with reference number "+ vo.getReferenceNo())
+                .build();
+        producer.sendTelegram(telegramMessageToMerchant);
+        producer.sendNotification(notificationToMerchant);
+        Map<String, Object> feedBackData = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "username", user.getUsername()
+        );
+        Email sendFeedBackEmail = Email.builder()
+                .to(user.getEmail())
+                .subject("New Transaction")
+                .body(feedBackData)
+                .template("new-transaction-feedback")
+                .build();
+        producer.sendEmail(sendFeedBackEmail);
+
+        NotificationData notificationData = NotificationData.builder()
+                .message("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                .build();
+        PushyMessage notificationToUser = PushyMessage.builder()
+                .to(user.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("New Transaction")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                                .build()
+                )
+                .data(notificationData)
+                .build();
+
+        producer.sendNotification(notificationToUser);
+
+        TelegramMessage telegramMessageToUser = TelegramMessage.builder()
+                .chatId(user.getTelegramChatId())
+                .message("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                .build();
+        producer.sendTelegram(telegramMessageToUser);
+    }
+
+    private void sendMessageAsMerchant(User user, User user1, GiftCardTransactionVO vo) {
+        Map<String, Object> data = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "name", user1.getUsername()
+        );
+        Email emailToMerchant = Email.builder()
+                .to(user1.getEmail())
+                .subject("New Transaction")
+                .body(data)
+                .template("new-transaction")
+                .build();
+        PushyMessage notificationToMerchant = PushyMessage.builder()
+                .to(user1.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("New Transaction")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("You have a new transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .data(
+                        NotificationData.builder()
+                                .message("You have a new transaction with reference number "+ vo.getReferenceNo())
+                                .build()
+                )
+                .build();
+        producer.sendEmail(emailToMerchant);
+        producer.sendNotification(notificationToMerchant);
+
+        Map<String, Object> feedBackData = Map.of(
+                "transactionReference", vo.getReferenceNo(),
+                "username", user.getUsername()
+        );
+
+        Email sendFeedBackEmail = Email.builder()
+                .to(user.getEmail())
+                .subject("New Transaction")
+                .body(feedBackData)
+                .template("new-transaction-feedback")
+                .build();
+
+        producer.sendEmail(sendFeedBackEmail);
+
+        NotificationData notificationData = NotificationData.builder()
+                .message("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                .build();
+
+        PushyMessage notificationToUser = PushyMessage.builder()
+                .to(user.getTelegramChatId())
+                .notification(
+                        DeviceNotificationProperties.builder()
+                                .title("New Transaction")
+                                .badge(1)
+                                .sound("ping.aiff")
+                                .body("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                                .build()
+                )
+                .data(notificationData)
+                .build();
+
+        producer.sendNotification(notificationToUser);
+
+        TelegramMessage telegramMessageToUser = TelegramMessage.builder()
+                .chatId(user.getTelegramChatId())
+                .message("Your transaction with reference number "+ vo.getReferenceNo()+" has been created")
+                .build();
+
+        producer.sendTelegram(telegramMessageToUser);
     }
 
     @Override

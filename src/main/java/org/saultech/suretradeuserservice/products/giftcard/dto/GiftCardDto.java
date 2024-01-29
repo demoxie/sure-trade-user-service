@@ -3,6 +3,7 @@ package org.saultech.suretradeuserservice.products.giftcard.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.NotEmpty;
@@ -38,11 +39,17 @@ public class GiftCardDto {
     private Integer quantity;
     @NotNull(message = "Card Value is required")
     private BigDecimal cardValue;
+
     private BigDecimal discount;
+
+    @JsonProperty("expiryDate")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @JsonDeserialize(using = com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer.class)
     @JsonSerialize(using = com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer.class)
     private LocalDate expiryDate;
+
     private String status;
+
+    @JsonProperty("screenshots")
     private Screenshots screenshots;
 }
