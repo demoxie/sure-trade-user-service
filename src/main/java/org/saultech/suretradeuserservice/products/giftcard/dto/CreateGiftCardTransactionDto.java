@@ -16,6 +16,7 @@ import org.saultech.suretradeuserservice.products.giftcard.enums.TransactionType
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -85,9 +86,10 @@ public class CreateGiftCardTransactionDto {
 
     private BigDecimal cardValue;
     private BigDecimal discount;
+    @JsonProperty("expiryDate")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @JsonDeserialize(using = com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer.class)
     @JsonSerialize(using = com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer.class)
     private LocalDate expiryDate;
-    private Screenshots screenshots;
+    private List<String> screenshots;
 }
