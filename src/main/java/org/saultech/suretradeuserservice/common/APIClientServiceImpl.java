@@ -141,6 +141,7 @@ public class APIClientServiceImpl implements APIClientService {
             case "BankDetailsVO" -> BankDetailsVO.class;
             case "StakedAssetVO" -> StakedAssetVO.class;
             case "PaymentVO" -> PaymentVO.class;
+            case "SupportedGiftCardsVO" -> SupportedGiftCardsVO.class;
             default -> throw APIException.builder()
                     .statusCode(400)
                     .message("Invalid return type")
@@ -246,13 +247,39 @@ public class APIClientServiceImpl implements APIClientService {
                 });
     }
 
+    @Override
+    public Mono<APIResponse> makeDeleteRequestWithoutQueryParamsWithMonoReturned(String s, String product, String giftCardVO) {
+        return clientSelector.select(product)
+                .delete()
+                .uri(s)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(APIError.class).flatMap(error -> {
+                            LoggingService.logError(error,product,s);
+                            return Mono.error(
+                                    APIException.builder()
+                                            .statusCode(clientResponse.statusCode().value())
+                                            .message(error.getMessage())
+                                            .build()
+                            );
+                        }))
+                .bodyToMono(Void.class)
+                .map(res->{
+                    LoggingService.logResponse(res,product,s);
+                    return APIResponse.builder()
+                            .message("Success")
+                            .statusCode(200)
+                            .data(null)
+                            .build();
+                });
+    }
+
     private void processGiftCardTransactions(Object res) {
         if(res instanceof GiftCardTransactionVO giftCardTransactionVO){
             if (giftCardTransactionVO.getUserId() != null) {
                 userRepository.findById(giftCardTransactionVO.getUserId())
                         .map(user -> {
                             UserProfileVO userProfileVO =  mapper.map(user, UserProfileVO.class);
-//                            mapUserProfile(user, userProfileVO);
                             userProfileVO.setCreatedAt(user.getCreatedAt());
                             userProfileVO.setUpdatedAt(user.getUpdatedAt());
                             return userProfileVO;
@@ -262,35 +289,24 @@ public class APIClientServiceImpl implements APIClientService {
             if (giftCardTransactionVO.getMerchantId() != null) {
                 userRepository.findById(giftCardTransactionVO.getMerchantId())
                         .map(user -> {
-                            UserProfileVO userProfileVO =  mapper.map(user, UserProfileVO.class);
-//                            userProfileVO.setCreatedAt(user.getCreatedAt());
-//                            userProfileVO.setUpdatedAt(user.getUpdatedAt());
-                            return userProfileVO;
+                            return mapper.map(user, UserProfileVO.class);
                         })
                         .subscribe(giftCardTransactionVO::setMerchant);
             }
             if (giftCardTransactionVO.getBankDetailsId() != null) {
                 bankDetailsRepository.findById(giftCardTransactionVO.getBankDetailsId())
                         .map(bankDetails -> {
-                            BankDetailsVO bankDetailsVO = mapper.map(bankDetails, BankDetailsVO.class);
-//                            bankDetailsVO.setCreatedAt(bankDetails.getCreatedAt());
-//                            bankDetailsVO.setUpdatedAt(bankDetails.getUpdatedAt());
-                            return bankDetailsVO;
+                            return mapper.map(bankDetails, BankDetailsVO.class);
                         })
                         .subscribe(giftCardTransactionVO::setBankDetails);
             }
             if (giftCardTransactionVO.getGiftCardRateId() != null) {
                 bankDetailsRepository.findById(giftCardTransactionVO.getGiftCardRateId())
                         .map(giftCardRate -> {
-                            GiftCardRateVO giftCardRateVO = mapper.map(giftCardRate, GiftCardRateVO.class);
-//                            giftCardRateVO.setCreatedAt(giftCardRate.getCreatedAt());
-//                            giftCardRateVO.setUpdatedAt(giftCardRate.getUpdatedAt());
-                            return giftCardRateVO;
+                            return mapper.map(giftCardRate, GiftCardRateVO.class);
                         })
                         .subscribe(giftCardTransactionVO::setGiftCardRate);
             }
-//            giftCardTransactionVO.setCreatedAt(giftCardTransactionVO.getCreatedAt());
-//            giftCardTransactionVO.setUpdatedAt(giftCardTransactionVO.getUpdatedAt());
         }
     }
 

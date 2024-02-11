@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
-import org.saultech.suretradeuserservice.business.repository.StakedAssetRepository;
+import org.saultech.suretradeuserservice.business.stake.repository.StakedAssetRepository;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
@@ -63,32 +63,40 @@ public class PaymentServiceImpl implements PaymentService {
                                         ))
                                         .flatMap(
                                                 apiResponse -> {
-                                                    PaymentVO paymentVO = (PaymentVO) apiResponse.getData();
+                                                    if(apiResponse.getStatusCode().equals("200")){
+                                                        PaymentVO paymentVO = (PaymentVO) apiResponse.getData();
 
-                                                    return stakedAssetRepository.findByUserId(user.getId())
-                                                            .flatMap(stakedAsset -> {
-                                                                stakedAsset.setPreviousBalance(stakedAsset.getBalance());
-                                                                stakedAsset.setBalance(stakedAsset.getBalance().subtract(paymentDto.getAmount()));
-                                                                return stakedAssetRepository.save(stakedAsset)
-                                                                        .switchIfEmpty(Mono.error(
-                                                                                APIException.builder()
-                                                                                        .statusCode(500)
-                                                                                        .message("An error occurred while saving staked asset")
-                                                                                        .build()
-                                                                        ))
-                                                                        .onErrorResume(throwable -> Mono.error(
-                                                                                APIException.builder()
-                                                                                        .statusCode(500)
-                                                                                        .message(throwable.getMessage())
-                                                                                        .build()
-                                                                        ));
-                                                            })
-                                                            .flatMap(stakedAsset -> {
-                                                                var userDeviceDetail = userRepository.findById(paymentVO.getUserId())
-                                                                        .flatMap(user1 -> sendMessageToUser(paymentDto, user, user1, paymentVO)).map(response -> response);
+                                                        return stakedAssetRepository.findByUserId(user.getId())
+                                                                .flatMap(stakedAsset -> {
+                                                                    stakedAsset.setPreviousBalance(stakedAsset.getBalance());
+                                                                    stakedAsset.setBalance(stakedAsset.getBalance().subtract(paymentDto.getAmount()));
+                                                                    return stakedAssetRepository.save(stakedAsset)
+                                                                            .switchIfEmpty(Mono.error(
+                                                                                    APIException.builder()
+                                                                                            .statusCode(500)
+                                                                                            .message("An error occurred while saving staked asset")
+                                                                                            .build()
+                                                                            ))
+                                                                            .onErrorResume(throwable -> Mono.error(
+                                                                                    APIException.builder()
+                                                                                            .statusCode(500)
+                                                                                            .message(throwable.getMessage())
+                                                                                            .build()
+                                                                            ));
+                                                                })
+                                                                .flatMap(stakedAsset -> {
+                                                                    var userDeviceDetail = userRepository.findById(paymentVO.getUserId())
+                                                                            .flatMap(user1 -> sendMessageToUser(paymentDto, user, user1, paymentVO)).map(response -> response);
 
-                                                                return sendFeedBackMessageAndReturnApiResponse(paymentDto, user, apiResponse, paymentVO, userDeviceDetail);
-                                                            });
+                                                                    return sendFeedBackMessageAndReturnApiResponse(paymentDto, user, apiResponse, paymentVO, userDeviceDetail);
+                                                                });
+                                                    }
+                                                    return Mono.error(
+                                                            APIException.builder()
+                                                                    .statusCode(400)
+                                                                    .message("Payment unsuccessful")
+                                                                    .build()
+                                                    );
 
                                                 });
                             }
