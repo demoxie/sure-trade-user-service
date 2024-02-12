@@ -14,6 +14,7 @@ public class CacheConfig {
     CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(redisCacheConfiguration())
+                .cacheWriter(redisCacheWriter(redisConnectionFactory))
                 .build();
     }
 
@@ -21,4 +22,11 @@ public class CacheConfig {
         return org.springframework.data.redis.cache.RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(java.time.Duration.ofMinutes(5));
     }
+
+    // private org.springframework.data.redis.cache.RedisCacheWriter redisCacheWriter() {
+    private org.springframework.data.redis.cache.RedisCacheWriter redisCacheWriter(RedisConnectionFactory redisConnectionFactory) {
+        return org.springframework.data.redis.cache.RedisCacheWriter
+                .lockingRedisCacheWriter(redisConnectionFactory);
+    }
+
 }

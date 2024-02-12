@@ -20,8 +20,10 @@ import org.saultech.suretradeuserservice.user.enums.Role;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.user.service.UserService;
 import org.saultech.suretradeuserservice.utils.ErrorUtils;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
@@ -35,6 +37,70 @@ public class GiftCardServiceImpl implements GiftCardService{
     private final UserRepository userRepository;
     private final APIClientService apiClientService;
     private final UserService userService;
+
+    @Override
+    public Mono<APIResponse> searchSupportedGiftCards(String name, String currency, int page, int size, String sort, String direction) {
+        return apiClientService.makeGetRequestWithQueryParamsAndFluxReturned("/gift-cards/params/search", "product", Map.of(
+                "name", name,
+                "currency", currency,
+                "page", page,
+                "size", size,
+                "sort", sort,
+                "direction", direction
+        ), "SupportedGiftCardsVO");
+    }
+
+    @Override
+    public Mono<APIResponse> getSupportedGiftCards(int page, int size, String sort, String direction) {
+        return apiClientService.makeGetRequestWithQueryParamsAndFluxReturned("/gift-cards/supported/gift-cards", "product", Map.of(
+                "page", page,
+                "size", size,
+                "sort", sort,
+                "direction", direction
+        ), "SupportedGiftCardsVO");
+    }
+
+    @Override
+    public Mono<APIResponse> getMyGiftCards(int page, int size, String sort, String direction) {
+        return ReactiveSecurityContextHolder.getContext()
+                .flatMap(securityContext -> {
+                    String username = securityContext.getAuthentication().getName();
+                    log.info("Username: {}", username);
+                    return userService.getUserByUsername(username);
+                })
+                .flatMap(user -> apiClientService.makeGetRequestWithQueryParamsAndFluxReturned("/gift-cards/mine", "product", Map.of(
+                        "userId", user.getId(),
+                        "page", page,
+                        "size", size,
+                        "sort", sort,
+                        "direction", direction
+                ), "GiftCardVO"));
+    }
+
+    @Override
+    public Mono<APIResponse> getGiftCardById(long id) {
+        return apiClientService.makeGetRequestWithoutQueryParamsWithMonoReturned("/gift-cards/"+id, "product", "GiftCardVO");
+    }
+
+    @Override
+    public Mono<APIResponse> updateGiftCard(Long id, GiftCardDto dto) {
+        return ReactiveSecurityContextHolder.getContext()
+                .flatMap(securityContext -> {
+                    String username = securityContext.getAuthentication().getName();
+                    log.info("Username: {}", username);
+                    return userService.getUserByUsername(username);
+                })
+                .flatMap(user -> {
+                    dto.setUserId(user.getId());
+                    return apiClientService.makePutRequestWithoutQueryParamsWithMonoReturned("/gift-cards/"+id, "product",dto, "GiftCardVO");
+                });
+    }
+
+    @Override
+    public Mono<APIResponse> deleteGiftCard(Long id) {
+        return apiClientService.makeDeleteRequestWithoutQueryParamsWithMonoReturned("/gift-cards/"+id, "product", "GiftCardVO");
+    }
+
     private final Producer producer;
     private final ModelMapper mapper;
     @Override

@@ -41,11 +41,7 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
 
     @Override
     public Mono<SecurityContext> load(ServerWebExchange exchange) {
-        if (AUTH_WHITELIST.stream().anyMatch(p -> {
-            log.info("Path: {}", exchange.getRequest().getPath().value());
-            return exchange.getRequest().getPath().value().contains(p);
-        })) {
-            log.info("Whitelisted Path: {}", exchange.getRequest().getPath().value());
+        if (AUTH_WHITELIST.stream().anyMatch(p -> exchange.getRequest().getPath().value().contains(p))) {
             return Mono.empty();
         }
         String token = extractToken(exchange.getRequest());
@@ -59,12 +55,9 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
                        .message("No token found in request headers")
                        .statusCode(401)
                        .build()))
-                .flatMap(tokens -> {
-
-                            return authenticationManager
-                                    .authenticate(new UsernamePasswordAuthenticationToken(tokens, tokens))
-                                    .map(SecurityContextImpl::new);
-                        }
+                .flatMap(tokens -> authenticationManager
+                        .authenticate(new UsernamePasswordAuthenticationToken(tokens, tokens))
+                        .map(SecurityContextImpl::new)
                         );
     }
 

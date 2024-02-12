@@ -4,7 +4,10 @@ import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.enums.Role;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Repository
 public interface UserRepository extends R2dbcRepository<User, Long> {
@@ -18,4 +21,6 @@ public interface UserRepository extends R2dbcRepository<User, Long> {
     Mono<User> findByRoles(Role role);
 
     Mono<User> findUsersByWalletAddress(String userWalletAddress);
+
+    Flux<User> findAllByIdIn(List<Long> ids);
 }

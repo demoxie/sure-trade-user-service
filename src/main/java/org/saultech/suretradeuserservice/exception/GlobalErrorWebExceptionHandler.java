@@ -129,7 +129,10 @@ public class GlobalErrorWebExceptionHandler extends
     }
 
     private Mono<ServerResponse> handleResponseStatusException(ResponseStatusException responseStatusException, APIError apiError) {
-        apiError.setMessage(Arrays.stream(Objects.requireNonNull(responseStatusException.getDetailMessageArguments())).map(Object::toString).reduce("", String::concat));
+        if (responseStatusException != null && responseStatusException.getDetailMessageArguments() != null){
+            apiError.setMessage(Arrays.stream(responseStatusException.getDetailMessageArguments()).map(Object::toString).reduce("", String::concat));
+        }
+        assert responseStatusException != null;
         apiError.setError(responseStatusException.getReason());
         apiError.setStatusCode(responseStatusException.getStatusCode().value());
         return ServerResponse.status(responseStatusException.getStatusCode())
