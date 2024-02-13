@@ -14,6 +14,11 @@ import org.saultech.suretradeuserservice.chat.repository.ChatRepository;
 import org.saultech.suretradeuserservice.chat.vo.ChatVO;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.exception.APIException;
+import org.saultech.suretradeuserservice.messaging.notification.NotificationData;
+import org.saultech.suretradeuserservice.messaging.notification.PushyMessage;
+import org.saultech.suretradeuserservice.messaging.telegram.TelegramMessage;
+import org.saultech.suretradeuserservice.rabbitmq.service.Producer;
+import org.saultech.suretradeuserservice.user.repository.UserDeviceDetailsRepository;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.saultech.suretradeuserservice.utils.LoggingService;
@@ -21,10 +26,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.ui.ModelMap;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +38,10 @@ import java.time.LocalDateTime;
 public class ChatServiceImpl implements ChatService{
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final UserDeviceDetailsRepository userDeviceDetailsRepository;
     private final ModelMapper mapper;
     private final ObjectMapper objectMapper;
+    private final Producer producer;
     @Override
     public Mono<APIResponse> sendMessage(ChatDto chatDto) {
         return ReactiveSecurityContextHolder.getContext()
@@ -54,8 +62,8 @@ public class ChatServiceImpl implements ChatService{
                                             .message(ErrorUtils.getErrorMessage(e))
                                             .build()
                             ))
-                            .map(chat -> {
-                                ChatVO chatVO =  mapper.map(chat, ChatVO.class);
+                            .flatMap(chat -> {
+                                ChatVO chatVO = mapper.map(chat, ChatVO.class);
                                 ChatScreenshots chatScreenshots = null;
                                 try {
                                     chatScreenshots = objectMapper.readValue(chat.getScreenshots(), ChatScreenshots.class);
@@ -63,17 +71,58 @@ public class ChatServiceImpl implements ChatService{
                                     throw new RuntimeException(e);
                                 }
                                 chatVO.setScreenshots(chatScreenshots.getUrls());
-                                return chatVO;
-                            })
-                            .map(chat -> {
-                                LoggingService.logResponse(chat, "User Service", "/chats/");
-                                return APIResponse.builder()
-                                        .statusCode(201)
-                                        .message("Message sent successfully")
-                                        .data(chat)
-                                        .build();
+                                return userRepository.findById(chat.getReceiverId())
+                                        .switchIfEmpty(Mono.defer(
+                                                Mono::empty
+                                        ))
+                                        .onErrorResume(e -> Mono.error(
+                                                APIException.builder()
+                                                        .statusCode(ErrorUtils.getStatusCode(e))
+                                                        .message(ErrorUtils.getErrorMessage(e))
+                                                        .build()
+                                        ))
+                                        .flatMap(receiver -> {
+                                            TelegramMessage telegramMessage = TelegramMessage.builder()
+                                                    .chatId(receiver.getTelegramChatId())
+                                                    .message(chat.getMessage())
+                                                    .build();
+                                            producer.sendTelegram(telegramMessage);
+                                            return userDeviceDetailsRepository.findByUserId(receiver.getId())
+                                                    .switchIfEmpty(Mono.error(
+                                                            APIException.builder()
+                                                                    .statusCode(404)
+                                                                    .message("Receiver device details not found")
+                                                                    .build()
+                                                    ))
+                                                    .onErrorResume(e -> Mono.error(
+                                                            APIException.builder()
+                                                                    .statusCode(ErrorUtils.getStatusCode(e))
+                                                                    .message(ErrorUtils.getErrorMessage(e))
+                                                                    .build()
+                                                    ))
+                                                    .map(userDeviceDetails -> {
+                                                        NotificationData notificationData = NotificationData.builder()
+                                                                .message(chat.getMessage())
+                                                                .build();
+                                                        PushyMessage pushyMessage = PushyMessage.builder()
+                                                                .to(userDeviceDetails.getDeviceToken())
+                                                                .data(notificationData)
+                                                                .build();
+                                                        producer.sendNotification(pushyMessage);
+                                                        return chatVO;
+                                                    });
+                                        })
+                                        .map(chatVoResponse -> {
+                                            LoggingService.logResponse(chatVoResponse, "User Service", "/chats/");
+                                            return APIResponse.builder()
+                                                    .statusCode(201)
+                                                    .message("Message sent successfully")
+                                                    .data(chatVoResponse)
+                                                    .build();
+                                        });
                             });
                 });
+
     }
 
     @Override
@@ -211,7 +260,8 @@ public class ChatServiceImpl implements ChatService{
     }
 
     @Override
-    public Mono<APIResponse> getMyChatHistory(long userId, long transactionId, int page, int size, String sort, String direction) {
+    @ReactiveRedisCacheable(cacheName = "getMyChatHistory", key = "#userId.toString + '_' + #transactionId.toString() + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getMyChatHistory(long userId, long transactionId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
         return ReactiveSecurityContextHolder.getContext()
@@ -241,12 +291,7 @@ public class ChatServiceImpl implements ChatService{
                             chatVO.setScreenshots(chatScreenshots.getUrls());
                             return chatVO;
                         })
-                        .collectList()
-                        .map(chats -> APIResponse.builder()
-                                .statusCode(200)
-                                .message("Chat history fetched successfully")
-                                .data(chats)
-                                .build()));
+                );
     }
 
     @Override

@@ -58,7 +58,12 @@ public class ChatController {
             @PathVariable long userId,
             @PathVariable long transactionId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "message") String sort, @RequestParam(defaultValue = "DESC") String direction
     ) {
-        return chatService.getMyChatHistory(userId, transactionId, page, size, sort, direction);
+        return chatService.getMyChatHistory(userId, transactionId, page, size, sort, direction)
+                .collectList()
+                .map(chatList->APIResponse.builder()
+                        .statusCode(200)
+                        .message("Chat history retrieved successfully")
+                        .data(chatList).build());
     }
 
     @GetMapping("/unread/get-all/transactions/{transactionId}")

@@ -28,10 +28,10 @@ spring:
     baseline-version: 0
     validate-on-migrate: true
   rabbitmq:
-    host: localhost
+    host: 193.122.150.2
     port: 5672
-    username: guest
-    password: guest
+    username: admin
+    password: admin
     virtual-host: /
     uri: amqp://guest:guest@localhost:5672
   data:
