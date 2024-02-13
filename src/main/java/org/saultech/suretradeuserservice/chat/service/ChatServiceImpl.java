@@ -267,7 +267,7 @@ public class ChatServiceImpl implements ChatService{
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .flatMap(userRepository::findUsersByEmail)
-                .flatMap(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(),userId, transactionId, pageRequest)
+                .flatMapMany(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(),userId, transactionId, pageRequest)
                         .switchIfEmpty(Mono.error(
                                 APIException.builder()
                                         .statusCode(404)
