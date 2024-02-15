@@ -15,4 +15,6 @@ public class AppConfig {
     private Notification notification;
     private Sms sms;
     private GiftCardTransaction giftCardTransaction;
+
+    private Business business;
 }

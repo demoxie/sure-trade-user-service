@@ -6,6 +6,7 @@ import org.saultech.suretradeuserservice.auth.dto.ChangePasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.ResetPasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
 import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
+import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
 import reactor.core.publisher.Mono;
 
@@ -14,7 +15,7 @@ public interface AuthenticationService {
 
     Mono<UserProfileVO> register(SignUpRequest request);
 
-    Mono<UserProfileVO> verifyOtp(VerifyOtpRequest request);
+    Mono<APIResponse> verifyOtp(VerifyOtpRequest request);
 
     Mono<Void> logout(String token);
 

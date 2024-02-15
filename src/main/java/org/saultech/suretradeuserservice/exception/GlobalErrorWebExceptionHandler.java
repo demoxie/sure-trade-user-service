@@ -5,6 +5,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.context.ApplicationContext;
@@ -24,7 +25,10 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
+
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 @Component
 @Order(-2)
@@ -71,6 +75,12 @@ public class GlobalErrorWebExceptionHandler extends
         }else if(throwable instanceof AccessDeniedException accessDeniedException) {
             log.error("AccessDeniedException is thrown: {}", accessDeniedException.getMessage());
             return handleAccessDeniedException(accessDeniedException,apiError);
+        }else if(throwable instanceof ConstraintViolationException constraintViolationException) {
+            log.error("ConstraintViolationException is thrown: {}", constraintViolationException.getMessage());
+            return handleConstraintViolationException(constraintViolationException,apiError);
+        }else if(throwable instanceof WebExchangeBindException webExchangeBindException) {
+            log.error("WebExchangeBindException is thrown: {}", webExchangeBindException.getMessage());
+            return handleWebExchangeBindException(webExchangeBindException,apiError);
         }
 
 
@@ -81,8 +91,27 @@ public class GlobalErrorWebExceptionHandler extends
                 .body(BodyInserters.fromValue(apiError));
     }
 
+    private Mono<ServerResponse> handleWebExchangeBindException(WebExchangeBindException webExchangeBindException, APIError apiError) {
+        log.error("WebExchangeBindException is thrown: {}", webExchangeBindException.getMessage());
+        apiError.setMessage(ErrorUtils.getErrorMessage(webExchangeBindException));
+        apiError.setError(webExchangeBindException.getLocalizedMessage());
+        apiError.setStatusCode(HttpStatus.BAD_REQUEST.value());
+        return ServerResponse.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(apiError));
+    }
+
+    private Mono<ServerResponse> handleConstraintViolationException(ConstraintViolationException constraintViolationException, APIError apiError) {
+        apiError.setMessage(ErrorUtils.getErrorMessage(constraintViolationException));
+        apiError.setError(constraintViolationException.getLocalizedMessage());
+        apiError.setStatusCode(HttpStatus.BAD_REQUEST.value());
+        return ServerResponse.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(apiError));
+    }
+
     private Mono<ServerResponse> handleAccessDeniedException(AccessDeniedException accessDeniedException, APIError apiError) {
-        apiError.setMessage(accessDeniedException.getMessage());
+        apiError.setMessage(ErrorUtils.getErrorMessage(accessDeniedException));
         apiError.setError(accessDeniedException.getLocalizedMessage());
         apiError.setStatusCode(HttpStatus.FORBIDDEN.value());
         return ServerResponse.status(HttpStatus.FORBIDDEN)
@@ -100,8 +129,11 @@ public class GlobalErrorWebExceptionHandler extends
     }
 
     private Mono<ServerResponse> handleResponseStatusException(ResponseStatusException responseStatusException, APIError apiError) {
-        apiError.setMessage(responseStatusException.getMessage());
-        apiError.setError(responseStatusException.getLocalizedMessage());
+        if (responseStatusException != null && responseStatusException.getDetailMessageArguments() != null){
+            apiError.setMessage(Arrays.stream(responseStatusException.getDetailMessageArguments()).map(Object::toString).reduce("", String::concat));
+        }
+        assert responseStatusException != null;
+        apiError.setError(responseStatusException.getReason());
         apiError.setStatusCode(responseStatusException.getStatusCode().value());
         return ServerResponse.status(responseStatusException.getStatusCode())
                 .contentType(MediaType.APPLICATION_JSON)

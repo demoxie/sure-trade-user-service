@@ -15,6 +15,8 @@ public class BaseRoutes {
     public static final String PAYMENTS = "/payments";
 
     public static final String SOCIALS = "/socials";
+
+    public static final String BANK_DETAILS = "/bank-details";
     private BaseRoutes() {
     }
 }

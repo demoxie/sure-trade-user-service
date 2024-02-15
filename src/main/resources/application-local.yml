@@ -20,8 +20,8 @@ spring:
       show_sql: true
       use_sql_comments: true
   flyway:
-    enabled: false
-    url: ${spring.r2dbc.url}
+    enabled: true
+    url: jdbc:mysql://localhost:3306/sure_trade_db
     user: ${spring.r2dbc.username}
     password: ${spring.r2dbc.password}
     locations: classpath:db/migration
@@ -67,11 +67,11 @@ springdoc:
 logging:
   level:
     root: INFO
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
     org.springframework.security: INFO
     org.springframework.security.oauth2: INFO
     com.hanqunfeng.reactive.redis.cache: DEBUG
-    org.springframework.web.reactive.function.client.ExchangeFunctions: ERROR
+    org.springframework.web.reactive.function.client.ExchangeFunctions: INFO
 
 server:
   error:
@@ -166,6 +166,10 @@ app:
     username: jvizer
     phone-number: +2348060000000
   business:
+    google-play-app-link: https://play.google.com/store/apps/details?id=com.suretrade
+    sign-up-referral-value: 100
+    sign-up-referral-discount: 0.1
+    sign-up-referral-expiry-date: 30
     gift-card-transactions:
       fee: 0.01
     crypto:
@@ -176,3 +180,47 @@ app:
       url: https://ropsten.infura.io/v3/5a2f1a4f-7f4a-4f1a-8f1a-4f1a7f4a5f1a
       chain-id: 3
       gas-price: 20000000000
+  tiers:
+    currency: USD
+    tier1:
+      id: 1
+      min-stake: 0
+      max-stake: 199
+      no-of-referrals: 1
+      referral-bonus: 0.1
+      no-of-transactions: 1
+    tier2:
+      id: 2
+      min-stake: 200
+      max-stake: 499
+      no-of-referrals: 5
+      referral-bonus: 0.2
+      no-of-transactions: 2
+    tier3:
+      id: 3
+      min-stake: 500
+      max-stake: 999
+      no-of-referrals: 10
+      referral-bonus: 0.3
+      no-of-transactions: 3
+    tier4:
+      id: 4
+      min-stake: 1000
+      max-stake: 4999
+      no-of-referrals: 15
+      referral-bonus: 0.4
+      no-of-transactions: 4
+    tier5:
+      id: 5
+      min-stake: 5000
+      max-stake: 9999
+      no-of-referrals: 25
+      referral-bonus: 0.5
+      no-of-transactions: 5
+    tier6:
+      id: 6
+      min-stake: 10000
+      max-stake: 500000
+      no-of-referrals: 50
+      referral-bonus: 0.6
+      no-of-transactions: 6

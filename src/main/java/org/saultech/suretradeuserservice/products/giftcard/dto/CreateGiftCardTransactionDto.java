@@ -1,8 +1,11 @@
 package org.saultech.suretradeuserservice.products.giftcard.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -12,6 +15,8 @@ import lombok.NoArgsConstructor;
 import org.saultech.suretradeuserservice.products.giftcard.enums.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -66,7 +71,7 @@ public class CreateGiftCardTransactionDto {
     @JsonProperty("currency")
     private String currency;
 
-    @NotNull(message = "Gift card dto is required")
+//    @NotNull(message = "Gift card dto is required")
     @JsonProperty("giftCardDto")
     private GiftCardDto giftCardDto;
 
@@ -78,4 +83,13 @@ public class CreateGiftCardTransactionDto {
 
     @JsonProperty("status")
     private String status;
+
+    private BigDecimal cardValue;
+    private BigDecimal discount;
+    @JsonProperty("expiryDate")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    @JsonDeserialize(using = com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer.class)
+    @JsonSerialize(using = com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer.class)
+    private LocalDate expiryDate;
+    private List<String> screenshots;
 }

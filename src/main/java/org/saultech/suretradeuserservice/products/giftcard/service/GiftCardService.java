@@ -5,6 +5,8 @@ import org.saultech.suretradeuserservice.products.giftcard.dto.AcceptRejectTrans
 import org.saultech.suretradeuserservice.products.giftcard.dto.CancelRequestDto;
 import org.saultech.suretradeuserservice.products.giftcard.dto.CreateGiftCardTransactionDto;
 import org.saultech.suretradeuserservice.products.giftcard.dto.GiftCardDto;
+import org.saultech.suretradeuserservice.products.giftcard.vo.SupportedGiftCardsVO;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface GiftCardService {
@@ -29,4 +31,16 @@ public interface GiftCardService {
     Mono<APIResponse> cancelMyGiftCardTransaction(Long transactionId, CancelRequestDto dto);
 
     Mono<APIResponse> acceptOrCancelTransaction(long transactionId, AcceptRejectTransactionDto dto);
+
+    Mono<APIResponse> searchSupportedGiftCards(String name, String currency, int page, int size, String sort, String direction);
+
+    Mono<APIResponse> getSupportedGiftCards(int page, int size, String sort, String direction);
+
+    Mono<APIResponse> getMyGiftCards(int page, int size, String sort, String direction);
+
+    Mono<APIResponse> getGiftCardById(long id);
+
+    Mono<APIResponse> updateGiftCard(Long id, GiftCardDto dto);
+
+    Mono<APIResponse> deleteGiftCard(Long id);
 }

@@ -19,4 +19,6 @@ public interface APIClientService {
     Mono<APIResponse> makePostRequestWithoutQueryParamsWithFluxResponse(String s, String product, GetMyGiftCardTransactionsWithOthersDto dto, String returnType);
 
     Mono<APIResponse> makePutRequestWithoutQueryParamsWithMonoReturned(String s, String product, Object body, String giftCardTransactionVO);
+
+    Mono<APIResponse> makeDeleteRequestWithoutQueryParamsWithMonoReturned(String s, String product, String giftCardVO);
 }
