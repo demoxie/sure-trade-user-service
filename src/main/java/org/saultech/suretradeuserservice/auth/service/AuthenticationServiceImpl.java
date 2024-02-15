@@ -13,6 +13,8 @@ import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.auth.JwtService;
 import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
 import org.saultech.suretradeuserservice.common.APIResponse;
+import org.saultech.suretradeuserservice.config.app.AppConfig;
+import org.saultech.suretradeuserservice.config.app.Business;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
 import org.saultech.suretradeuserservice.messaging.sms.Sms;
@@ -58,6 +60,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     private final RedisTemplate<String, Object> redisTemplate;
     private final Producer producer;
     private final ObjectMapper objectMapper;
+    private final AppConfig appConfig;
 
 
     @Override
@@ -167,6 +170,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     }
 
     public Mono<UserProfileVO> handleRegistration(SignUpRequest request){
+        Business business = appConfig.getBusiness();
         User userToSave = modelMapper.map(request, User.class);
         userToSave.setPassword(passwordEncoder.encode(request.getPassword()));
         userToSave.setCreatedAt(LocalDateTime.now());
@@ -174,6 +178,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         userToSave.setRoles(Role.SUPER_ADMIN);
         String otp = UtilService.generate6DigitOTP(6);
         userToSave.setOtp(otp);
+        userToSave.setTierId(business.getTiers().getTier1().getId());
         return userRepository.save(userToSave)
                 .onErrorResume(ex->{
                     log.error("Error occurred: {}", ex.getClass());
