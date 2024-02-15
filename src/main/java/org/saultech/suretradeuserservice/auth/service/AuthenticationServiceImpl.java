@@ -268,21 +268,18 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                     redisTemplate.delete(user.getEmail());
                     user.setOtp(null);
                     user.setActive(true);
+                    user.setVerified(true);
                     user.setUpdatedAt(LocalDateTime.now());
-                    return r2dbcEntityTemplate.update(user.getClass())
-                            .matching(Query.query(where("id").is(user.getId())))
-                            .apply(
-                                    Update.update("isActive", true)
-                                            .set("otp", null)
-                                            .set("updatedAt", LocalDateTime.now())
-                            )
-                            .filter(successState -> successState == 1)
-                            .switchIfEmpty(Mono.error(
-                                    APIException.builder()
-                                            .message("Unable to update user")
-                                            .statusCode(500)
-                                            .build()
-                            ))
+                    return userRepository.save(user)
+                            .onErrorResume(ex->{
+                                log.error("Error occurred: {}", ex.getClass());
+                                return Mono.error(
+                                        APIException.builder()
+                                                .message(ErrorUtils.getErrorMessage(ex))
+                                                .statusCode(ErrorUtils.getStatusCode(ex))
+                                                .build()
+                                );
+                            })
                             .flatMap(successState -> {
                                     ReactiveSecurityContextHolder.withAuthentication(
                                             new UsernamePasswordAuthenticationToken(
