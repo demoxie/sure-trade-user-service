@@ -4,19 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.auth.AuthRequest;
-import org.saultech.suretradeuserservice.auth.dto.ResetPasswordRequest;
-import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.auth.JwtService;
+import org.saultech.suretradeuserservice.auth.dto.ChangePasswordRequest;
+import org.saultech.suretradeuserservice.auth.dto.ResetPasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
+import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.common.APIResponse;
-import org.saultech.suretradeuserservice.config.app.AppConfig;
-import org.saultech.suretradeuserservice.config.app.Business;
-import org.saultech.suretradeuserservice.config.app.Tier;
-import org.saultech.suretradeuserservice.config.app.Tiers;
+import org.saultech.suretradeuserservice.config.app.*;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.email.Email;
 import org.saultech.suretradeuserservice.messaging.sms.Sms;
@@ -25,11 +22,8 @@ import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.enums.Role;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
-import org.saultech.suretradeuserservice.auth.dto.ChangePasswordRequest;
 import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.saultech.suretradeuserservice.utils.UtilService;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.relational.core.query.Query;
@@ -52,8 +46,6 @@ import static org.springframework.data.relational.core.query.Criteria.where;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService{
-//    @Value("otp.expiration")
-//    private Integer otpExpiration;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -62,7 +54,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     private final RedisTemplate<String, Object> redisTemplate;
     private final Producer producer;
     private final ObjectMapper objectMapper;
-    private final AppConfig appConfig;
+    private final BusinessConfig businessConfig;
 
 
     @Override
@@ -172,7 +164,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     }
 
     public Mono<UserProfileVO> handleRegistration(SignUpRequest request){
-        Business business = appConfig.getBusiness();
+        Business business = businessConfig.getBusiness();
         Tiers tiers = business.getTiers();
         Tier tier1 = tiers.getTier1();
         User userToSave = modelMapper.map(request, User.class);
