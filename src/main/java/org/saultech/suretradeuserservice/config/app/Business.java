@@ -1,5 +1,6 @@
 package org.saultech.suretradeuserservice.config.app;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;

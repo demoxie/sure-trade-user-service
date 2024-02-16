@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.saultech.suretradeuserservice.common.APIResponse;
-import org.saultech.suretradeuserservice.config.app.AppConfig;
-import org.saultech.suretradeuserservice.config.app.Business;
-import org.saultech.suretradeuserservice.config.app.Tier;
-import org.saultech.suretradeuserservice.config.app.Tiers;
+import org.saultech.suretradeuserservice.config.app.*;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -17,7 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class TierServiceImpl implements TierService{
-    private final AppConfig appConfig;
+    private final BusinessConfig appConfig;
     @Override
     public Mono<APIResponse> getTiers() {
         List<Tier> tierList = getTierList();

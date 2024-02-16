@@ -12,6 +12,7 @@ import org.saultech.suretradeuserservice.business.referals.vo.ReferralVO;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.config.app.AppConfig;
 import org.saultech.suretradeuserservice.config.app.Business;
+import org.saultech.suretradeuserservice.config.app.BusinessConfig;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.repository.UserRepository;
@@ -30,7 +31,7 @@ public class ReferralServiceImpl implements ReferralService {
     private final ReferralRepository referralRepository;
     private final UserRepository userRepository;
     private final ModelMapper mapper;
-    private final AppConfig appConfig;
+    private final BusinessConfig appConfig;
 
     @Override
     public Mono<APIResponse> createReferral(Long userId, Long referredUserId) {

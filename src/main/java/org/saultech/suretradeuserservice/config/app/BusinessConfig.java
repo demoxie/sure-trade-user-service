@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "app.business")
+@ConfigurationProperties(prefix = "app")
 @Data
 public class BusinessConfig {
     private Business business;
