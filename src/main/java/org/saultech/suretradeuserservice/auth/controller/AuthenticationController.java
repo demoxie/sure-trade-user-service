@@ -26,9 +26,16 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/login")
-    public Mono<UserProfileVO> login(@Valid  @RequestBody AuthRequest authRequest){
+    public Mono<APIResponse> login(@Valid  @RequestBody AuthRequest authRequest){
         LoggingService.logRequest(authRequest, "User Service", "/auth/login", "POST");
-        return authenticationService.login(authRequest);
+        return authenticationService.login(authRequest)
+                .flatMap(response -> Mono.just(
+                        APIResponse.builder()
+                                .data(response)
+                                .statusCode(200)
+                                .message("Login successful")
+                                .build()
+                ));
     }
 
     @PostMapping("/register")
@@ -44,34 +51,54 @@ public class AuthenticationController {
     }
 
     @PostMapping("/logout/me")
-    public Mono<String> logout(@RequestHeader("Authorization") String token){
+    public Mono<APIResponse> logout(@RequestHeader("Authorization") String token){
         LoggingService.logRequest(token, "User Service", "/auth/logout/me", "POST");
         return authenticationService.logout(token)
-                .then(Mono.defer(() -> Mono.just("Logout successful")));
+                .then(Mono.defer(() -> Mono.just(
+                        APIResponse.builder()
+                                .statusCode(200)
+                                .message("Logout successful")
+                                .build()
+                )));
     }
 
     @PutMapping("/change-password/mine")
-    public Mono<String> changePassword(@Valid @RequestBody ChangePasswordRequest request, ServerWebExchange exchange){
+    public Mono<APIResponse> changePassword(@Valid @RequestBody ChangePasswordRequest request, ServerWebExchange exchange){
         String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
         String ip = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress();
         LoggingService.logRequest(request, "User Service", "/auth/change-password/mine", "PUT");
         return authenticationService.changePassword(request, userAgent, ip)
-                .then(Mono.defer(() -> Mono.just("Password changed successfully")));
+                .then(Mono.defer(() -> Mono.just(
+                        APIResponse.builder()
+                                .statusCode(200)
+                                .message("Password changed successfully")
+                                .build()
+                )));
     }
 
     @PutMapping("/reset-password/{otp}")
-    public Mono<String> resetPassword(@PathVariable String otp, @Valid @RequestBody ResetPasswordRequest request, ServerWebExchange exchange){
+    public Mono<APIResponse> resetPassword(@PathVariable String otp, @Valid @RequestBody ResetPasswordRequest request, ServerWebExchange exchange){
         String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
         String ip = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress();
         LoggingService.logRequest(request, "User Service", "/auth/reset-password/{otp}", "PUT");
         return authenticationService.resetPassword(otp, request, userAgent, ip)
-                .then(Mono.defer(() -> Mono.just("Password reset successfully")));
+                .then(Mono.defer(() -> Mono.just(
+                        APIResponse.builder()
+                                .statusCode(200)
+                                .message("Password reset successfully")
+                                .build()
+                )));
     }
 
     @GetMapping("/validate/{email}")
-    public Mono<String> validateAccountForPasswordReset(@PathVariable String email){
+    public Mono<APIResponse> validateAccountForPasswordReset(@PathVariable String email){
         LoggingService.logRequest(email, "User Service", "/auth/validate/{email}", "GET");
         return authenticationService.validateAccountForPasswordChange(email)
-                .then(Mono.defer(() -> Mono.just("Password reset Code sent successfully")));
+                .then(Mono.defer(() -> Mono.just(
+                        APIResponse.builder()
+                                .statusCode(200)
+                                .message("Account validated successfully")
+                                .build()
+                )));
     }
 }
