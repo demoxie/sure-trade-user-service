@@ -10,23 +10,23 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 public interface ChatService {
-    Mono<APIResponse> sendMessage(ChatDto chatDto);
+    Mono<ChatVO> sendMessage(ChatDto chatDto);
 
-    Mono<APIResponse> deleteMessage(Long chatId);
+    Mono<Void> deleteMessage(Long chatId);
 
-    Mono<APIResponse> markAsRead(Long chatId);
+    Mono<ChatVO> markAsRead(Long chatId);
 
-    Mono<APIResponse> getUserChatHistory(Long userId, int page, int size, String sort, String direction);
+    Flux<ChatVO> getUserChatHistory(Long userId, int page, int size, String sort, String direction);
 
-    Mono<APIResponse> getTransactionChatHistory(Long userId, Long chatId, Long transactionId, int page, int size, String sort, String direction);
+    Flux<ChatVO> getTransactionChatHistory(Long userId, Long chatId, Long transactionId, int page, int size, String sort, String direction);
 
-    Mono<APIResponse> getChatHistoryBetween(Long userId, Long transactionId, int page, int size, String sort, String direction);
+    Flux<ChatVO> getChatHistoryBetween(Long userId, Long transactionId, int page, int size, String sort, String direction);
 
     Flux<ChatVO> getMyChatHistory(long userId, long transactionId, int page, int size, String sort, String direction);
 
-    Mono<APIResponse> getUnreadMessages(long transactionId, int page, int size, String sort, String direction);
+    Flux<ChatVO> getUnreadMessages(long transactionId, int page, int size, String sort, String direction);
 
-    Mono<APIResponse> getUnreadMessagesBetween(long userId, long transactionId, int page, int size, String sort, String direction);
+    Flux<ChatVO> getUnreadMessagesBetween(long userId, long transactionId, int page, int size, String sort, String direction);
 
-    Mono<APIResponse> getChatById(Long chatId);
+    Mono<ChatVO> getChatById(Long chatId);
 }

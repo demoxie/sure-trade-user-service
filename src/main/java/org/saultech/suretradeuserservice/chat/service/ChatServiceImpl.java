@@ -12,7 +12,6 @@ import org.saultech.suretradeuserservice.chat.dto.ChatScreenshots;
 import org.saultech.suretradeuserservice.chat.entity.Chat;
 import org.saultech.suretradeuserservice.chat.repository.ChatRepository;
 import org.saultech.suretradeuserservice.chat.vo.ChatVO;
-import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.messaging.notification.NotificationData;
 import org.saultech.suretradeuserservice.messaging.notification.PushyMessage;
@@ -30,7 +29,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +41,7 @@ public class ChatServiceImpl implements ChatService{
     private final ObjectMapper objectMapper;
     private final Producer producer;
     @Override
-    public Mono<APIResponse> sendMessage(ChatDto chatDto) {
+    public Mono<ChatVO> sendMessage(ChatDto chatDto) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .flatMap(userRepository::findUsersByEmail)
@@ -114,11 +112,7 @@ public class ChatServiceImpl implements ChatService{
                                         })
                                         .map(chatVoResponse -> {
                                             LoggingService.logResponse(chatVoResponse, "User Service", "/chats/");
-                                            return APIResponse.builder()
-                                                    .statusCode(201)
-                                                    .message("Message sent successfully")
-                                                    .data(chatVoResponse)
-                                                    .build();
+                                            return chatVoResponse;
                                         });
                             });
                 });
@@ -126,23 +120,18 @@ public class ChatServiceImpl implements ChatService{
     }
 
     @Override
-    public Mono<APIResponse> deleteMessage(Long chatId) {
+    public Mono<Void> deleteMessage(Long chatId) {
         return chatRepository.deleteById(chatId)
                 .onErrorResume(e -> Mono.error(
                         APIException.builder()
                                 .statusCode(ErrorUtils.getStatusCode(e))
                                 .message(ErrorUtils.getErrorMessage(e))
                                 .build()
-                ))
-                .map(chat -> APIResponse.builder()
-                        .statusCode(200)
-                        .message("Message deleted successfully")
-                        .data(chat)
-                        .build());
+                ));
     }
 
     @Override
-    public Mono<APIResponse> markAsRead(Long chatId) {
+    public Mono<ChatVO> markAsRead(Long chatId) {
         return chatRepository.findById(chatId)
                 .switchIfEmpty(Mono.error(
                         APIException.builder()
@@ -171,16 +160,16 @@ public class ChatServiceImpl implements ChatService{
                                 chatVO.setScreenshots(chatScreenshots.getUrls());
                                 return chatVO;
                             })
-                            .map(updatedChat -> APIResponse.builder()
-                                    .statusCode(200)
-                                    .message("Message marked as read")
-                                    .data(updatedChat)
-                                    .build());
+                            .map(chatVO -> {
+                                LoggingService.logResponse(chatVO, "User Service", "/chats/mark-as-read");
+                                return chatVO;
+                            });
                 });
     }
 
     @Override
-    public Mono<APIResponse> getUserChatHistory(Long userId, int page, int size, String sort, String direction) {
+    @ReactiveRedisCacheable(cacheName = "getUserChatHistory", key = "#userId.toString + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getUserChatHistory(Long userId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
         return chatRepository.findBySenderId(userId, pageRequest)
@@ -206,28 +195,49 @@ public class ChatServiceImpl implements ChatService{
                     }
                     chatVO.setScreenshots(chatScreenshots.getUrls());
                     return chatVO;
-                })
-                .collectList()
-                .map(chats -> APIResponse.builder()
-                        .statusCode(200)
-                        .message("Chat history fetched successfully")
-                        .data(chats)
-                        .build());
+                });
     }
 
     @Override
-    public Mono<APIResponse> getTransactionChatHistory(Long userId, Long chatId, Long transactionId, int page, int size, String sort, String direction) {
-        return null;
+    @ReactiveRedisCacheable(cacheName = "getTransactionChatHistory", key = "#userId.toString + '_' + #chatId.toString() + '_' + #transactionId.toString() + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getTransactionChatHistory(Long userId, Long chatId, Long transactionId, int page, int size, String sort, String direction) {
+        Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
+        PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
+        return chatRepository.findBySenderIdAndReceiverIdAndTransactionId(userId, chatId, transactionId, pageRequest)
+                .switchIfEmpty(Mono.error(
+                        APIException.builder()
+                                .statusCode(404)
+                                .message("No chat history found")
+                                .build()
+                ))
+                .onErrorResume(e -> Mono.error(
+                        APIException.builder()
+                                .statusCode(ErrorUtils.getStatusCode(e))
+                                .message(ErrorUtils.getErrorMessage(e))
+                                .build()
+                ))
+                .map(chat -> {
+                    ChatVO chatVO =  mapper.map(chat, ChatVO.class);
+                    ChatScreenshots chatScreenshots = null;
+                    try {
+                        chatScreenshots = objectMapper.readValue(chat.getScreenshots(), ChatScreenshots.class);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    chatVO.setScreenshots(chatScreenshots.getUrls());
+                    return chatVO;
+                });
     }
 
     @Override
-    public Mono<APIResponse> getChatHistoryBetween(Long userId, Long transactionId, int page, int size, String sort, String direction) {
+    @ReactiveRedisCacheable(cacheName = "getChatHistoryBetween", key = "#userId.toString + '_' + #transactionId.toString() + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getChatHistoryBetween(Long userId, Long transactionId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .flatMap(userRepository::findUsersByEmail)
-                .flatMap(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(), userId, transactionId, pageRequest)
+                .flatMapMany(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(), userId, transactionId, pageRequest)
                         .switchIfEmpty(Mono.error(
                                 APIException.builder()
                                         .statusCode(404)
@@ -251,16 +261,11 @@ public class ChatServiceImpl implements ChatService{
                             chatVO.setScreenshots(chatScreenshots.getUrls());
                             return chatVO;
                         })
-                        .collectList()
-                        .map(chats -> APIResponse.builder()
-                                .statusCode(200)
-                                .message("Chat history fetched successfully")
-                                .data(chats)
-                                .build()));
+                );
     }
 
     @Override
-    @ReactiveRedisCacheable(cacheName = "getMyChatHistory", key = "#userId.toString + '_' + #transactionId.toString() + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    @ReactiveRedisCacheable(cacheName = "getMyChatHistory", key = "#userId.toString() + '_' + #transactionId.toString() + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
     public Flux<ChatVO> getMyChatHistory(long userId, long transactionId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
@@ -295,13 +300,14 @@ public class ChatServiceImpl implements ChatService{
     }
 
     @Override
-    public Mono<APIResponse> getUnreadMessages(long transactionId, int page, int size, String sort, String direction) {
+    @ReactiveRedisCacheable(cacheName = "getUnreadMessages", key = "#transactionId.toString + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getUnreadMessages(long transactionId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .flatMap(userRepository::findUsersByEmail)
-                .flatMap(user -> chatRepository.findAllBySenderIdAndTransactionId(user.getId(), transactionId, false, pageRequest)
+                .flatMapMany(user -> chatRepository.findAllBySenderIdAndTransactionId(user.getId(), transactionId, false, pageRequest)
                         .switchIfEmpty(Mono.error(
                                 APIException.builder()
                                         .statusCode(404)
@@ -325,22 +331,18 @@ public class ChatServiceImpl implements ChatService{
                             chatVO.setScreenshots(chatScreenshots.getUrls());
                             return chatVO;
                         })
-                        .collectList()
-                        .map(chats -> APIResponse.builder()
-                                .statusCode(200)
-                                .message("Unread messages fetched successfully")
-                                .data(chats)
-                                .build()));
+                );
     }
 
     @Override
-    public Mono<APIResponse> getUnreadMessagesBetween(long userId, long transactionId, int page, int size, String sort, String direction) {
+    @ReactiveRedisCacheable(cacheName = "getUnreadMessagesBetween", key = "#userId.toString + '_' + #transactionId.toString + '_' + #page + '_' + #size + '_' + #sort + '_' + #direction")
+    public Flux<ChatVO> getUnreadMessagesBetween(long userId, long transactionId, int page, int size, String sort, String direction) {
         Sort sortedBy = Sort.by(Sort.Direction.fromString(direction.toUpperCase()), sort);
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortedBy);
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .flatMap(userRepository::findUsersByEmail)
-                .flatMap(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(), userId, transactionId, pageRequest)
+                .flatMapMany(user -> chatRepository.findBySenderIdAndReceiverIdAndTransactionId(user.getId(), userId, transactionId, pageRequest)
                         .switchIfEmpty(Mono.error(
                                 APIException.builder()
                                         .statusCode(404)
@@ -364,16 +366,12 @@ public class ChatServiceImpl implements ChatService{
                             chatVO.setScreenshots(chatScreenshots.getUrls());
                             return chatVO;
                         })
-                        .collectList()
-                        .map(chats -> APIResponse.builder()
-                                .statusCode(200)
-                                .message("Unread messages fetched successfully")
-                                .data(chats)
-                                .build()));
+                );
     }
 
     @Override
-    public Mono<APIResponse> getChatById(Long chatId) {
+    @ReactiveRedisCacheable(cacheName = "getChatById", key = "#chatId.toString")
+    public Mono<ChatVO> getChatById(Long chatId) {
         return chatRepository.findById(chatId)
                 .switchIfEmpty(Mono.error(
                         APIException.builder()
@@ -398,10 +396,6 @@ public class ChatServiceImpl implements ChatService{
                     chatVO.setScreenshots(chatScreenshots.getUrls());
                     return chatVO;
                 })
-                .map(chat -> APIResponse.builder()
-                        .statusCode(200)
-                        .message("Chat fetched successfully")
-                        .data(chat)
-                        .build());
+                .map(chat -> chat);
     }
 }
