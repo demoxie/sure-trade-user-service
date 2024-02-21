@@ -171,7 +171,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         userToSave.setPassword(passwordEncoder.encode(request.getPassword()));
         userToSave.setCreatedAt(LocalDateTime.now());
         userToSave.setUpdatedAt(LocalDateTime.now());
-        userToSave.setRoles(Role.SUPER_ADMIN);
+        userToSave.setRoles(Role.USER);
         userToSave.setTierId(tier1.getId());
         String otp = UtilService.generate6DigitOTP(6);
         userToSave.setOtp(otp);

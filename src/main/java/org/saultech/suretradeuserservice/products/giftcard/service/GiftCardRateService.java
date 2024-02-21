@@ -10,4 +10,6 @@ public interface GiftCardRateService {
     Mono<APIResponse> createGiftCardRate(GiftCardRateDto dto);
 
     Mono<APIResponse> getMyGiftCardRates(int page, int size, String sort, String direction);
+
+    Mono<APIResponse> getActiveMerchantRates(int page, int size, String sort, String direction);
 }

@@ -34,7 +34,7 @@ public class SecurityConfig{
             BASE_URL + "/swagger-ui.html",
             BASE_URL + "/swagger-ui/index.html",
             BASE_URL + "/swagger-ui/",
-            BASE_URL + "/socials/telegram/**",
+            BASE_URL + "/socials/**",
     };
 
     private static final String[] MERCHANT_ROUTES = {

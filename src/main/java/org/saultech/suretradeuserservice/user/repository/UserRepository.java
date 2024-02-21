@@ -1,5 +1,6 @@
 package org.saultech.suretradeuserservice.user.repository;
 
+import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.user.entity.User;
 import org.saultech.suretradeuserservice.user.enums.Role;
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
@@ -23,4 +24,6 @@ public interface UserRepository extends R2dbcRepository<User, Long> {
     Mono<User> findUsersByWalletAddress(String userWalletAddress);
 
     Flux<User> findAllByIdIn(List<Long> ids);
+
+    Flux<User> findAllByRoles(String merchant);
 }

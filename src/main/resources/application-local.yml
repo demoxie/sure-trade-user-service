@@ -4,9 +4,9 @@ spring:
     web-application-type: reactive
     allow-circular-references: true
   r2dbc:
-    url: r2dbc:mysql://localhost:3306/sure_trade_db
+    url: r2dbc:mysql://localhost:3306/sure_trade_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
     username: root
-    password: Ubandomaadamu@24
+    password: root
     name: sure_trade_db
     generate-unique-name: true
     pool:
@@ -24,10 +24,12 @@ spring:
     url: jdbc:mysql://localhost:3306/sure_trade_db
     user: ${spring.r2dbc.username}
     password: ${spring.r2dbc.password}
-    locations: classpath:db/migration
+    locations: filesystem:src/main/resources/db/migration
+    schemas: sure_trade_db
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 1.0.0
     validate-on-migrate: true
+    create-schemas: true
   rabbitmq:
     host: localhost
     port: 5672

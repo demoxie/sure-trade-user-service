@@ -44,4 +44,20 @@ public class GiftCardRateServiceImpl implements GiftCardRateService{
                     return apiClientService.makeGetRequestWithQueryParamsAndFluxReturned("/gift-card-rates/my-rates/"+user.getId(), "product", queryParams,"GiftCardRateVO");
                 });
     }
+
+    @Override
+    public Mono<APIResponse> getActiveMerchantRates(
+            int page, int size, String sort, String direction
+    ) {
+        Map<String, Object> queryParams = Map.of(
+                "page", page,
+                "size", size,
+                "sort", sort,
+                "direction", direction
+        );
+        return apiClientService
+                .makeGetRequestWithQueryParamsAndFluxReturned("/gift-card-rates/active-merchant-rates",
+                        "product",queryParams,"GiftCardRateVO");
+    }
+
 }
