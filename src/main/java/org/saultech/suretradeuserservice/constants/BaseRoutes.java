@@ -17,6 +17,10 @@ public class BaseRoutes {
     public static final String SOCIALS = "/socials";
 
     public static final String BANK_DETAILS = "/bank-details";
+
+    public static final String MERCHANTS = "/merchants";
+
+    public static final String ADMINS = "/admins";
     private BaseRoutes() {
     }
 }

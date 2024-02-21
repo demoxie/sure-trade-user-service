@@ -3,6 +3,7 @@ package org.saultech.suretradeuserservice.user.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.saultech.suretradeuserservice.common.APIResponse;
+import org.saultech.suretradeuserservice.products.giftcard.service.GiftCardRateService;
 import org.saultech.suretradeuserservice.user.dto.ProfileImageDto;
 import org.saultech.suretradeuserservice.user.dto.BecomeAMerchantDto;
 import org.saultech.suretradeuserservice.user.dto.RegisterTelegramDto;
@@ -21,6 +22,7 @@ import static org.saultech.suretradeuserservice.constants.BaseRoutes.USERS;
 @RequestMapping(value = USERS, produces = "application/json")
 public class UserController {
     private final UserService userService;
+    private final GiftCardRateService giftCardRateService;
 
     @GetMapping
     public Flux<UserProfileVO> getUsers() {
@@ -58,6 +60,17 @@ public class UserController {
     public Mono<APIResponse> becomeMerchant(@Valid @RequestBody BecomeAMerchantDto dto) {
         LoggingService.logRequest(dto, "User Service","/users/merchant/request/", "POST");
         return userService.becomeMerchant(dto);
+    }
+
+
+    @GetMapping("/merchants/active/rate")
+    public Mono<APIResponse> getActiveMerchantRates(
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "createdAt") String sort,
+            @RequestParam(name = "direction", defaultValue = "DESC") String direction
+    ) {
+        return giftCardRateService.getActiveMerchantRates(page, size, sort, direction);
     }
 
 

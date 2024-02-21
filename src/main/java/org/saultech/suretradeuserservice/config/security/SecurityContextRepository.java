@@ -32,7 +32,7 @@ public class SecurityContextRepository implements ServerSecurityContextRepositor
             "/verify-otp",
             "/validate",
             "swagger-ui",
-            "/telegram/register"
+            "/socials/telegram/register"
     );
     @Override
     public Mono<Void> save(ServerWebExchange exchange, SecurityContext context) {

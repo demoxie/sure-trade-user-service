@@ -6,21 +6,22 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
-@RequiredArgsConstructor
 public class ClientSelector {
     @Qualifier("productWebClient")
     private final WebClient productWebClient;
     @Qualifier("paymentWebClient")
     private final WebClient paymentWebClient;
 
+    public ClientSelector(WebClient productWebClient, WebClient paymentWebClient) {
+        this.productWebClient = productWebClient;
+        this.paymentWebClient = paymentWebClient;
+    }
+
     public WebClient select(String serviceName) {
-        switch (serviceName) {
-            case "product":
-                return productWebClient;
-            case "payment":
-                return paymentWebClient;
-            default:
-                return null;
-        }
+        return switch (serviceName) {
+            case "product" -> productWebClient;
+            case "payment" -> paymentWebClient;
+            default -> null;
+        };
     }
 }
