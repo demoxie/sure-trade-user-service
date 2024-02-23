@@ -15,7 +15,6 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 @EnableWebFlux
 @EnableR2dbcRepositories
 @EnableR2dbcAuditing
-@EnableRedisRepositories
 @EnableRetry
 @EnableTransactionManagement
 @EnableAspectJAutoProxy
