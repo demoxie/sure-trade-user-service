@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.springframework.data.relational.core.query.Criteria.where;
 
@@ -59,6 +60,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
 
     @Override
     public Mono<UserProfileVO> login(@Valid @RequestBody AuthRequest authRequest) {
+        AtomicReference<User> userToSave = new AtomicReference<>();
         return userRepository.findUsersByEmail(authRequest.getEmail())
                 .switchIfEmpty(Mono.error(
                         APIException.builder()
@@ -73,13 +75,45 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                                 .statusCode(401)
                                 .build()
                 ))
+                .map(user -> {
+                    userToSave.set(user);
+                    return user;
+                })
                 .filter(User::isVerified)
-                .switchIfEmpty(Mono.error(
-                        APIException.builder()
-                                .message("Account verified not verified")
-                                .statusCode(401)
-                                .build()
-                ))
+                .switchIfEmpty(Mono.defer(()->{
+                    Duration expirationTime = Duration.ofMinutes(15);
+                    String otp = UtilService.generate6DigitOTP(6);
+                    User user = userToSave.get();
+                    user.setOtp(otp);
+                    redisTemplate.opsForValue().getAndDelete(authRequest.getEmail());
+                    redisTemplate.opsForValue().set(authRequest.getEmail(), otp, expirationTime);
+                    Email email = Email.builder()
+                            .to(authRequest.getEmail())
+                            .subject("Account Verification")
+                            .body(Map.of("otp", otp))
+                            .template("account-verification")
+                            .createdDate(new Date())
+                            .build();
+                    producer.sendEmail(email);
+                    Sms sms = Sms.builder()
+                            .to(user.getPhoneNumber())
+                            .body("Your OTP is " + otp)
+                            .build();
+                    producer.sendSms(sms);
+                    r2dbcEntityTemplate.update(User.class)
+                            .matching(Query.query(where("id").is(user.getId())))
+                            .apply(
+                     Update.update("otp", otp)
+                            .set("isActive", true)
+                            .set("updatedAt", LocalDateTime.now())
+                    ).subscribe();
+                    return Mono.error(
+                            APIException.builder()
+                                    .message("Another OTP sent for verification")
+                                    .statusCode(200)
+                                    .build()
+                    );
+                }))
                 .filter(users -> !users.isSuspended())
                 .switchIfEmpty(Mono.error(
                         APIException.builder()
@@ -344,7 +378,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                             .switchIfEmpty(Mono.error(
                                     APIException.builder()
                                             .message("User is logged out already")
-                                            .statusCode(401)
+                                            .statusCode(200)
                                             .build()
                             ))
                             .flatMap(user -> {
