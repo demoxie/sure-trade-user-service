@@ -33,6 +33,7 @@ import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -59,7 +60,10 @@ public class AuthenticationServiceImpl implements AuthenticationService{
 
 
     @Override
-    public Mono<UserProfileVO> login(@Valid @RequestBody AuthRequest authRequest) {
+    public Mono<UserProfileVO> login(@Valid @RequestBody AuthRequest authRequest, ServerWebExchange exchange) {
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
+        String deviceIp = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress();
+        String userAgent = exchange.getRequest().getHeaders().getFirst("User-Agent");
         AtomicReference<User> userToSave = new AtomicReference<>();
         return userRepository.findUsersByEmail(authRequest.getEmail())
                 .switchIfEmpty(Mono.error(
@@ -68,60 +72,65 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                                 .statusCode(401)
                                 .build()
                 ))
-                .filter(user -> passwordEncoder.matches(authRequest.getPassword(), user.getPassword()))
-                .switchIfEmpty(Mono.error(
-                        APIException.builder()
-                                .message("Invalid username or password")
-                                .statusCode(401)
-                                .build()
-                ))
-                .map(user -> {
-                    userToSave.set(user);
-                    return user;
-                })
-                .filter(User::isVerified)
-                .switchIfEmpty(Mono.defer(()->{
-                    Duration expirationTime = Duration.ofMinutes(15);
-                    String otp = UtilService.generate6DigitOTP(6);
-                    User user = userToSave.get();
-                    user.setOtp(otp);
-                    redisTemplate.opsForValue().getAndDelete(authRequest.getEmail());
-                    redisTemplate.opsForValue().set(authRequest.getEmail(), otp, expirationTime);
-                    Email email = Email.builder()
-                            .to(authRequest.getEmail())
-                            .subject("Account Verification")
-                            .body(Map.of("otp", otp))
-                            .template("account-verification")
-                            .createdDate(new Date())
-                            .build();
-                    producer.sendEmail(email);
-                    Sms sms = Sms.builder()
-                            .to(user.getPhoneNumber())
-                            .body("Your OTP is " + otp)
-                            .build();
-                    producer.sendSms(sms);
-                    r2dbcEntityTemplate.update(User.class)
-                            .matching(Query.query(where("id").is(user.getId())))
-                            .apply(
-                     Update.update("otp", otp)
-                            .set("isActive", true)
-                            .set("updatedAt", LocalDateTime.now())
-                    ).subscribe();
+                .onErrorResume(ex->{
+                    log.error("Error occurred: {}", ex.getClass());
                     return Mono.error(
                             APIException.builder()
-                                    .message("Another OTP sent for verification")
-                                    .statusCode(200)
+                                    .message(ErrorUtils.getErrorMessage(ex))
+                                    .statusCode(ErrorUtils.getStatusCode(ex))
                                     .build()
                     );
-                }))
-                .filter(users -> !users.isSuspended())
-                .switchIfEmpty(Mono.error(
-                        APIException.builder()
-                                .message("Account suspended")
-                                .statusCode(401)
-                                .build()
-                ))
+                })
                 .flatMap(user -> {
+
+                    if (!passwordEncoder.matches(authRequest.getPassword(), user.getPassword())) {
+                        return Mono.error(
+                                APIException.builder()
+                                        .message("Invalid username or password")
+                                        .statusCode(401)
+                                        .build()
+                        );
+                    }
+                    if (!user.isVerified()) {
+                        Duration expirationTime = Duration.ofMinutes(15);
+                        String otp = UtilService.generate6DigitOTP(6);
+                        user.setOtp(otp);
+//                        redisTemplate.opsForValue().getAndDelete(authRequest.getEmail());
+                        redisTemplate.opsForValue().set(authRequest.getEmail(), otp, expirationTime);
+                        Email email = Email.builder()
+                                .to(authRequest.getEmail())
+                                .subject("Account Verification")
+                                .body(Map.of("otp", otp))
+                                .template("account-verification")
+                                .createdDate(new Date())
+                                .build();
+                        producer.sendEmail(email);
+                        Sms sms = Sms.builder()
+                                .to(user.getPhoneNumber())
+                                .body("Your OTP is " + otp)
+                                .build();
+                        producer.sendSms(sms);
+                        return r2dbcEntityTemplate.update(User.class)
+                                .matching(Query.query(where("id").is(user.getId())))
+                                .apply(
+                                        Update.update("otp", otp)
+                                                .set("isActive", true)
+                                                .set("updatedAt", LocalDateTime.now())
+                                ).map(successState -> {
+                                    UserProfileVO userProfileVO = modelMapper.map(user, UserProfileVO.class);
+                                    userProfileVO.setCreatedAt(user.getCreatedAt());
+                                    userProfileVO.setUpdatedAt(user.getUpdatedAt());
+                                    return userProfileVO;
+                                });
+                    }
+                    if (user.isSuspended()) {
+                        return Mono.error(
+                                APIException.builder()
+                                        .message("Account suspended")
+                                        .statusCode(401)
+                                        .build()
+                        );
+                    }
                     Map<String, Object> claims = new HashMap<>();
                     claims.put("username", user.getUsername());
                     claims.put("email", user.getEmail());
@@ -134,7 +143,9 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                     return r2dbcEntityTemplate.update(User.class)
                             .matching(Query.query(where("id").is(user.getId())))
                             .apply(
-                                    getUpdate(token)
+                                    Update.update("token", token)
+                                            .set("isActive", true)
+                                            .set("updatedAt", LocalDateTime.now())
                             )
                             .flatMap(existingUser -> {
                                 if (existingUser == 1) {
@@ -143,13 +154,28 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                                                     user.getEmail(),
                                                     null,
                                                     user.getAuthorities()
-                                            )
-                                    );
+                                            ));
                                     return userRepository.findUsersByEmail(user.getEmail())
                                             .map(user1 -> {
-                                                UserProfileVO userProfileVO =  modelMapper.map(user1, UserProfileVO.class);
+                                                UserProfileVO userProfileVO = modelMapper.map(user1, UserProfileVO.class);
                                                 userProfileVO.setCreatedAt(user1.getCreatedAt());
                                                 userProfileVO.setUpdatedAt(user1.getUpdatedAt());
+                                                assert userAgent != null;
+                                                Map<String, Object> body = Map.of(
+                                                        "username", user1.getUsername(),
+                                                        "time", currentTime,
+                                                        "userAgent", userAgent,
+                                                        "ipAddress", deviceIp
+                                                );
+                                                Email email = Email.builder()
+                                                        .to(user1.getEmail())
+                                                        .subject("Login")
+                                                        .body(body)
+                                                        .template("login-notice")
+                                                        .createdDate(new Date())
+                                                        .build();
+                                                producer.sendEmail(email);
+
                                                 return userProfileVO;
                                             });
                                 }
@@ -159,6 +185,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
                                                 .statusCode(500)
                                                 .build()
                                 );
+
                             });
                 });
     }

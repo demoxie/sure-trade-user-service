@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.config.app.*;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -16,59 +17,40 @@ import java.util.List;
 public class TierServiceImpl implements TierService{
     private final BusinessConfig appConfig;
     @Override
-    public Mono<APIResponse> getTiers() {
+    public Flux<Tier> getTiers() {
         List<Tier> tierList = getTierList();
-        return Mono.just(
-                APIResponse.builder()
-                        .data(tierList)
-                        .message("Tiers fetched successfully")
-                        .statusCode(200)
-                        .build()
-        );
+        return Flux.fromIterable(tierList);
     }
 
     @Override
-    public Mono<APIResponse> getTierForAnAmount(Double amount) {
+    public Mono<Tier> getTierForAnAmount(Double amount) {
         List<Tier> tierList = getTierList();
         for (Tier tier: tierList) {
             if (amount >= tier.getMinStake() && amount <= tier.getMaxStake()) {
-                return Mono.just(
-                        APIResponse.builder()
-                                .data(tier)
-                                .message("Tier fetched successfully")
-                                .statusCode(200)
-                                .build()
-                );
+                return Mono.just(tier);
             }
         }
-        return Mono.just(
-                APIResponse.builder()
-                        .message("Tier not found")
-                        .statusCode(404)
-                        .build()
-        );
+        return Mono.empty();
     }
 
     @Override
-    public Mono<APIResponse> getTierById(Long id) {
+    public Mono<Tier> getTierById(Long id) {
         List<Tier> tierList = getTierList();
         for (Tier tier: tierList) {
             if (tier.getId() == id) {
-                return Mono.just(
-                        APIResponse.builder()
-                                .data(tier)
-                                .message("Tier fetched successfully")
-                                .statusCode(200)
-                                .build()
-                );
+                return Mono.just(tier);
             }
         }
-        return Mono.just(
-                APIResponse.builder()
-                        .message("Tier not found")
-                        .statusCode(404)
-                        .build()
-        );
+        return Mono.empty();
+    }
+
+    @Override
+    public Mono<Tier> getTierByRange(int min, int max) {
+        return getTierList().stream()
+                .filter(tier -> tier.getMinStake() == min && tier.getMaxStake() == max)
+                .findFirst()
+                .map(Mono::just)
+                .orElse(Mono.empty());
     }
 
     @NotNull

@@ -1,12 +1,17 @@
 package org.saultech.suretradeuserservice.business.tier.service;
 
 import org.saultech.suretradeuserservice.common.APIResponse;
+import org.saultech.suretradeuserservice.config.app.Tier;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface TierService {
-    Mono<APIResponse> getTiers();
+    Flux<Tier> getTiers();
 
-    Mono<APIResponse> getTierForAnAmount(Double amount);
+    Mono<Tier> getTierForAnAmount(Double amount);
 
-    Mono<APIResponse> getTierById(Long id);
+    Mono<Tier> getTierById(Long id);
+
+    Mono<Tier> getTierByRange(int min, int max);
+
 }

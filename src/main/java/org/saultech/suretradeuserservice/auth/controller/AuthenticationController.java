@@ -26,9 +26,9 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/login")
-    public Mono<APIResponse> login(@Valid  @RequestBody AuthRequest authRequest){
+    public Mono<APIResponse> login(@Valid  @RequestBody AuthRequest authRequest,ServerWebExchange exchange){
         LoggingService.logRequest(authRequest, "User Service", "/auth/login", "POST");
-        return authenticationService.login(authRequest)
+        return authenticationService.login(authRequest, exchange)
                 .flatMap(response -> Mono.just(
                         APIResponse.builder()
                                 .data(response)
