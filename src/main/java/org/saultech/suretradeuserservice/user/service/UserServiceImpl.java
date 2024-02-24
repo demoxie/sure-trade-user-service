@@ -300,15 +300,13 @@ public class UserServiceImpl implements UserService {
                                                 .message("An error occurred while processing your request")
                                                 .statusCode(500)
                                                 .build()))
-                                        .flatMap(updatedStakedAsset -> {
-                                            return becomeMerchantRequestRepository.save(req)
-                                                    .switchIfEmpty(
-                                                            Mono.error(APIException.builder()
-                                                                    .message("An error occurred while processing your request")
-                                                                    .statusCode(500)
-                                                                    .build())
-                                                    ).flatMap(Mono::just);
-                                        })
+                                        .flatMap(updatedStakedAsset -> becomeMerchantRequestRepository.save(req)
+                                                .switchIfEmpty(
+                                                        Mono.error(APIException.builder()
+                                                                .message("An error occurred while processing your request")
+                                                                .statusCode(500)
+                                                                .build())
+                                                ).flatMap(Mono::just))
                                         .flatMap(savedMerchantRequest -> {
                                             Map<String, Object> userEmailBody = Map.of(
                                                     "username", merchantRequest.getUsername()

@@ -8,10 +8,11 @@ import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
 import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.common.APIResponse;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 public interface AuthenticationService {
-    Mono<UserProfileVO> login(@Valid AuthRequest authRequest);
+    Mono<UserProfileVO> login(@Valid AuthRequest authRequest, ServerWebExchange exchange);
 
     Mono<UserProfileVO> register(SignUpRequest request);
 
