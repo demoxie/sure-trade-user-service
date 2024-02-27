@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.saultech.suretradeuserservice.common.BaseVO;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 
@@ -16,7 +17,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StakedAssetVO extends BaseVO {
+public class StakedAssetVO extends BaseVO implements Serializable {
     private Long id;
     private Long userId;
     private Long tierId;

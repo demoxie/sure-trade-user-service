@@ -6,6 +6,7 @@ import org.saultech.suretradeuserservice.user.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -35,6 +36,8 @@ public class SecurityConfig{
             BASE_URL + "/swagger-ui/index.html",
             BASE_URL + "/swagger-ui/",
             BASE_URL + "/socials/**",
+            BASE_URL + "/admins/login",
+            BASE_URL + "/admins/register",
     };
 
     private static final String[] MERCHANT_ROUTES = {
@@ -76,7 +79,7 @@ public class SecurityConfig{
                                 .accessDeniedHandler(
                                         (swe, e) -> Mono.fromRunnable(() -> {
                                             log.error("Access denied error: {}", e.getMessage());
-                                            swe.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                                            throw new AccessDeniedException("Access Denied", e);
                                         })
                                 )
                 )

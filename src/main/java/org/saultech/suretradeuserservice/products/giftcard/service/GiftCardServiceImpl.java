@@ -1,5 +1,6 @@
 package org.saultech.suretradeuserservice.products.giftcard.service;
 
+import com.hanqunfeng.reactive.redis.cache.aop.ReactiveRedisCacheable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -104,6 +105,7 @@ public class GiftCardServiceImpl implements GiftCardService{
     private final Producer producer;
     private final ModelMapper mapper;
     @Override
+//    @ReactiveRedisCacheable(cacheName = "getGiftCardTransactions", key = "#page + '_' + #size + '_' + #sort + '_' + #direction")
     public Mono<APIResponse> getGiftCardTransactions(int page, int size, String sort, String direction) {
         return apiClientService.makePostRequestWithoutQueryParamsWithFluxResponse("/gift-card/transaction/get-all", "product", GetMyGiftCardTransactionsWithOthersDto
                 .builder()
@@ -307,16 +309,19 @@ public class GiftCardServiceImpl implements GiftCardService{
     }
 
     @Override
+    @ReactiveRedisCacheable(cacheName = "getGiftCardTransaction", key = "#id.toString()")
     public Mono<APIResponse> getGiftCardTransaction(Long id) {
         return apiClientService.makeGetRequestWithoutQueryParamsWithMonoReturned("/gift-card/transaction/"+id, "product", "GiftCardTransactionVO");
     }
 
     @Override
+    @ReactiveRedisCacheable(cacheName = "getGiftCardTransactionByReferenceNo", key = "#referenceNo")
     public Mono<APIResponse> getGiftCardTransactionByReferenceNo(String referenceNo) {
         return apiClientService.makeGetRequestWithoutQueryParamsWithMonoReturned("/gift-card/transaction/references/"+referenceNo, "product", "GiftCardTransactionVO");
     }
 
     @Override
+    @ReactiveRedisCacheable(cacheName = "getGiftCardTransactionsWithOthers", key = "#page + '_' + #size + '_' + #sort + '_' + #direction")
     public Mono<APIResponse> getGiftCardTransactionsWithOthers(int page, int size, String sort, String direction) {
         return ReactiveSecurityContextHolder.getContext()
                 .flatMap(securityContext -> {

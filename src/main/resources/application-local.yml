@@ -39,10 +39,7 @@ spring:
     uri: amqp://guest:guest@localhost:5672
   data:
     redis:
-      host: localhost
-      port: 6379
-      password:
-      database: 0
+      url: rediss://red-cne5r3icn0vc73f9hv90:j8Aa90yF8Ewju2ZAKtg0LJSQYjQUpAZ3@oregon-redis.render.com:6379
   kafka:
     client-id: messaging-service
     bootstrap-servers:
