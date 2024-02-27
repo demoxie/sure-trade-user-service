@@ -19,31 +19,76 @@ public class StakedAssetController {
     @GetMapping("/users/my/stakes")
     public Mono<APIResponse> getMyStakes(@RequestParam String currency) {
         LoggingService.logRequest(currency, "User Service", "/stakes/users/my/stakes", "GET");
-        return stakedAssetService.getMyStakes(currency);
+        return stakedAssetService.getMyStakes(currency)
+                .collectList()
+                .flatMap(stakedAssetVOS -> {
+                            APIResponse apiResponse = APIResponse
+                                    .builder()
+                                    .statusCode(200)
+                                    .message("Stakes fetched successfully")
+                                    .data(stakedAssetVOS)
+                                    .build();
+                            return Mono.just(apiResponse);
+                        }
+                );
     }
 
     @PostMapping("/")
     public Mono<APIResponse> stakeAsset(@RequestBody StakeAssetDto stakeAssetDto) {
           LoggingService.logRequest(stakeAssetDto, "User Service", "/stakes", "POST");
-          return stakedAssetService.stakeAsset(stakeAssetDto);
+          return stakedAssetService.stakeAsset(stakeAssetDto)
+                    .map(stakedAssetVO -> APIResponse
+                            .builder()
+                            .statusCode(201)
+                            .message("Stake created successfully")
+                            .data(stakedAssetVO)
+                            .build());
     }
 
     @GetMapping("/users/{userId}")
     public Mono<APIResponse> getUserStakes(@PathVariable long userId, @RequestParam(required = false) String currency, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "createdAt") String sort, @RequestParam(defaultValue = "DESC") String direction) {
         LoggingService.logRequest(userId, "User Service", "/stakes/users/{userId}", "GET");
-        return stakedAssetService.getUserStakes(userId, currency, page, size, sort, direction);
+        return stakedAssetService.getUserStakes(userId, currency, page, size, sort, direction)
+                .collectList()
+                .flatMap(stakedAssetVOS -> {
+                            APIResponse apiResponse = APIResponse
+                                    .builder()
+                                    .statusCode(200)
+                                    .message("Stakes fetched successfully")
+                                    .data(stakedAssetVOS)
+                                    .build();
+                            return Mono.just(apiResponse);
+                        }
+                );
     }
 
     @GetMapping("/users/wallet/{userWalletAddress}")
     public Mono<APIResponse> getUserStakes(@PathVariable String userWalletAddress, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "createdAt") String sort, @RequestParam(defaultValue = "DESC") String direction) {
         LoggingService.logRequest(userWalletAddress, "User Service", "/stakes/users/wallet/{userWalletAddress}", "GET");
-        return stakedAssetService.getUserStakesByWalletAddress(userWalletAddress, page, size, sort, direction);
+        return stakedAssetService.getUserStakesByWalletAddress(userWalletAddress, page, size, sort, direction)
+                .collectList()
+                .flatMap(stakedAssetVOS -> {
+                            APIResponse apiResponse = APIResponse
+                                    .builder()
+                                    .statusCode(200)
+                                    .message("Stakes fetched successfully")
+                                    .data(stakedAssetVOS)
+                                    .build();
+                            return Mono.just(apiResponse);
+                        }
+                );
     }
 
     @GetMapping("/{stakeId}")
     public Mono<APIResponse> getStake(@PathVariable long stakeId) {
         LoggingService.logRequest(stakeId, "User Service", "/stakes/{stakeId}", "GET");
-        return stakedAssetService.getStake(stakeId);
+        return stakedAssetService.getStake(stakeId)
+                .map(stakedAssetVO -> APIResponse
+                        .builder()
+                        .statusCode(200)
+                        .message("Stake fetched successfully")
+                        .data(stakedAssetVO)
+                        .build());
     }
 
     @PutMapping("/{stakeId}")

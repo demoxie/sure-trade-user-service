@@ -7,6 +7,7 @@ import org.saultech.suretradeuserservice.auth.dto.ResetPasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.VerifyOtpRequest;
 import org.saultech.suretradeuserservice.auth.service.AuthenticationService;
 import org.saultech.suretradeuserservice.common.APIResponse;
+import org.saultech.suretradeuserservice.exception.APIException;
 import org.saultech.suretradeuserservice.user.vo.UserProfileVO;
 import org.saultech.suretradeuserservice.auth.dto.ChangePasswordRequest;
 import org.saultech.suretradeuserservice.auth.dto.SignUpRequest;
@@ -29,13 +30,21 @@ public class AuthenticationController {
     public Mono<APIResponse> login(@Valid  @RequestBody AuthRequest authRequest,ServerWebExchange exchange){
         LoggingService.logRequest(authRequest, "User Service", "/auth/login", "POST");
         return authenticationService.login(authRequest, exchange)
-                .flatMap(response -> Mono.just(
-                        APIResponse.builder()
-                                .data(response)
+                .flatMap(response -> {
+                    if(response.isVerified()){
+                        return Mono.just(APIResponse.builder()
                                 .statusCode(200)
                                 .message("Login successful")
-                                .build()
-                ));
+                                .data(response)
+                                .build());
+                    }
+                    return Mono.error(
+                            APIException.builder()
+                                    .statusCode(401)
+                                    .message("Account not verified, an OTP has been sent to your email for verification")
+                                    .build()
+                    );
+                });
     }
 
     @PostMapping("/register")

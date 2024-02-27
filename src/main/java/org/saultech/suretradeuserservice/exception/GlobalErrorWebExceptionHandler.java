@@ -1,18 +1,17 @@
 package org.saultech.suretradeuserservice.exception;
 
-import io.jsonwebtoken.ClaimJwtException;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.saultech.suretradeuserservice.utils.ErrorUtils;
 import org.springframework.boot.autoconfigure.web.WebProperties;
+import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
+import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -21,14 +20,10 @@ import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
-import org.springframework.boot.web.error.ErrorAttributeOptions;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 
 @Component
 @Order(-2)
